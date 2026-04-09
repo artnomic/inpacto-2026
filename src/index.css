@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  --orange:   #FF8F44;
+  --pink:     #FA1462;
+  --pink2:    #E23973;
+  --purple:   #35126A;
+  --cyan:     #4DC1E7;
+  --white:    #FFFFFF;
+  --dark:     #2D2D2D;
+
+  --grad:       linear-gradient(135deg, #FF8F44 0%, #FA1462 45%, #35126A 75%, #4DC1E7 100%);
+  --grad-warm:  linear-gradient(135deg, #FF8F44 0%, #FA1462 60%, #E23973 100%);
+  --grad-hero:  linear-gradient(160deg, #FF8F44 0%, #FA1462 40%, #35126A 80%);
+
+  --bg:       #FAFAF9;
+  --bg2:      #F2F1EF;
+  --bg3:      #E8E6E2;
+  --surface:  #FFFFFF;
+  --border:   rgba(0,0,0,0.08);
+  --border2:  rgba(0,0,0,0.05);
+  --text:     #1C1815;
+  --text2:    #5A5550;
+  --text3:    #9A9590;
+  --xp:       #C47A00;
+  --xp-bg:    rgba(196,122,0,0.1);
+  --green:    #1A9960;
+  --red:      #D93025;
+  --shadow:   0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.07);
+  --radius:   18px;
+  --radius-sm: 12px;
+  --safe-bottom: env(safe-area-inset-bottom, 20px);
+
+  --font-display: 'Montserrat', sans-serif;
+  --font-body:    'Montserrat', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; background: #E5E3DE; font-family: var(--font-body); color: var(--text); }
+body { display: flex; justify-content: center; align-items: center; }
+
+#root {
+  width: 100%;
+  max-width: 430px;
+  height: 100dvh;
+  max-height: 932px;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+  border-radius: 44px;
+  box-shadow: 0 8px 48px rgba(0,0,0,0.18);
+}
+
+@media (max-width: 430px) {
+  #root { border-radius: 0; max-height: 100dvh; }
+}
+
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 88px;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+
+/* Gradient text */
+.grad-text {
+  background: var(--grad-warm);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.grad-text-hero {
+  background: var(--grad-hero);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animations */
+@keyframes slideIn   { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideBack { from { transform: translateX(-28%); opacity: .5; } to { transform: translateX(0); opacity: 1; } }
+@keyframes sheetUp   { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes fadeIn    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes splashUp  { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes blink     { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+@keyframes xpPop     { 0% { opacity: 0; transform: translateY(0) scale(.8); } 50% { opacity: 1; transform: translateY(-24px) scale(1.1); } 100% { opacity: 0; transform: translateY(-44px) scale(.9); } }
+
+.screen-slide-in   { animation: slideIn  0.28s cubic-bezier(0.4,0,0.2,1) forwards; }
+.screen-slide-back { animation: slideBack 0.28s cubic-bezier(0.4,0,0.2,1) forwards; }
+.sheet-up  { animation: sheetUp 0.3s cubic-bezier(0.34,1.4,0.64,1); }
+.fade-in   { animation: fadeIn 0.2s ease; }
+.splash-up { animation: splashUp 0.7s 0.15s ease both; }
+.live-dot-anim { animation: blink 1.2s infinite; }
+.xp-pop { animation: xpPop 0.9s ease forwards; }
+
+button { font-family: var(--font-body); }
+input, textarea { font-family: var(--font-body); }

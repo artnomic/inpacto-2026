@@ -1,0 +1,25 @@
+{
+  "name": "InPacto 2026",
+  "short_name": "InPacto",
+  "description": "Saturados 2026 — O app oficial da conferência InPacto",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#08000D",
+  "theme_color": "#FA1462",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
