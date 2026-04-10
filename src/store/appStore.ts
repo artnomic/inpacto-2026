@@ -647,14 +647,14 @@ export const useAppStore = create<AppState>()(
   },
 
   deletePost: async (postId) => {
-    const { authUserId } = get()
+    const { authUserId, user } = get()
     if (!authUserId) return
     set(s => ({
       feed: s.feed
         .filter(p => p.id !== postId)
         .map(p => ({ ...p, replies: (p.replies ?? []).filter(r => r.id !== postId) }))
     }))
-    try { await api.deletePost(postId, authUserId) } catch { get().loadFeed() }
+    try { await api.deletePost(postId, authUserId, user.role === 'admin') } catch { get().loadFeed() }
   },
   pinPost: async (postId) => {
     const post = get().feed.find(p => p.id === postId)

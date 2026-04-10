@@ -606,7 +606,7 @@ export function HomeScreen() {
                             </div>
                           </div>
                         </button>
-                        {!isAnnouncement && (isOwn || isAdmin) && (
+                        {(isAdmin || (!isAnnouncement && isOwn)) && (
                           <button onClick={() => openMenu(post.id)} style={{ position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: '50%', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 18, fontFamily: 'var(--font-body)', flexShrink: 0 }}>⋮</button>
                         )}
 
@@ -944,7 +944,7 @@ export function HomeScreen() {
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text3)', textAlign: 'center', padding: '8px 0 16px', borderBottom: '1px solid var(--border2)', marginBottom: 8 }}>
                 Post de {menuPost.userName}
               </div>
-              {menuPost.userId === authUserId && (
+              {(menuPost.userId === authUserId || isAdmin) && (
                 <button onClick={handleDeletePost} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 12px', background: 'none', border: 'none', borderRadius: 12, cursor: 'pointer', fontFamily: 'var(--font-body)', textAlign: 'left' }}>
                   <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🗑️</div>
                   <div>

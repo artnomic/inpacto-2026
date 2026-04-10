@@ -215,7 +215,7 @@ export async function getLiveSession(): Promise<Session | null> {
 // Turn a specific session on/off as live. Ensures only one session is live at a time.
 export async function setSessionLive(sessionId: string, isLive: boolean) {
   if (isLive) {
-    // First, turn off any currently live session
+    // Primeiro desliga qualquer sessão ao vivo antes de ligar a nova
     await supabase.from('sessions').update({ is_live: false }).eq('is_live', true)
   }
   const { error } = await supabase
@@ -223,6 +223,39 @@ export async function setSessionLive(sessionId: string, isLive: boolean) {
     .update({ is_live: isLive })
     .eq('id', sessionId)
   if (error) throw error
+}
+
+// Desliga todas as sessões ao vivo de uma vez
+export async function clearAllLive() {
+  const { error } = await supabase
+    .from('sessions')
+    .update({ is_live: false })
+    .eq('is_live', true)
+  if (error) throw error
+}
+
+// Retorna a sessão marcada como ao vivo (manual admin toggle)
+export async function getLiveSessionManual(): Promise<Session | null> {
+  const { data } = await supabase
+    .from('sessions')
+    .select('*')
+    .eq('is_live', true)
+    .limit(1)
+    .maybeSingle()
+
+  if (!data) return null
+
+  return {
+    id: data.id,
+    day: data.day,
+    title: data.title,
+    speaker: data.speaker ?? '',
+    type: data.type as Session['type'],
+    startTime: data.start_time,
+    endTime: data.end_time,
+    description: data.description ?? '',
+    isLive: true,
+  }
 }
 
 // ─── MISSIONS ─────────────────────────────────────────────────────────────────
@@ -524,12 +557,13 @@ export async function uploadPostImage(userId: string, file: File): Promise<strin
 }
 
 
-export async function deletePost(postId: string, userId: string) {
-  const { error } = await supabase
-    .from('feed_posts')
-    .delete()
-    .eq('id', postId)
-    .eq('user_id', userId)
+export async function deletePost(postId: string, userId: string, isAdmin = false) {
+  let query = supabase.from('feed_posts').delete().eq('id', postId)
+  // Admin pode excluir qualquer post; usuário comum só exclui o próprio
+  if (!isAdmin) {
+    query = query.eq('user_id', userId)
+  }
+  const { error } = await query
   if (error) throw error
 }
 
