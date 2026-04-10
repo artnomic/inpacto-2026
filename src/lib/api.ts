@@ -90,14 +90,13 @@ export async function getProfile(userId: string): Promise<User | null> {
     bio: data.bio ?? '',
     xp: data.xp ?? 0,
     age: data.age ?? undefined,
+    role: data.role ?? 'user',
   }
 }
 
 export async function upsertProfile(userId: string, updates: Partial<User>) {
   const raw = {
-    id: userId,
     name: updates.name,
-    email: updates.email,
     avatar_url: updates.avatar,
     church: updates.church,
     city: updates.city,
@@ -107,7 +106,8 @@ export async function upsertProfile(userId: string, updates: Partial<User>) {
   const payload = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== undefined))
   const { error } = await supabase
     .from('profiles')
-    .upsert(payload, { onConflict: 'id' })
+    .update(payload)
+    .eq('id', userId)
   if (error) throw error
 }
 

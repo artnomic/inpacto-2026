@@ -3,7 +3,7 @@ import { uploadPostImage } from '../lib/api'
 import { useAppStore } from '../store/appStore'
 
 type FeedTab = 'comments' | 'prayer' | 'announcements'
-type SheetType = 'none' | 'pick' | 'comment' | 'live-question' | 'prayer' | 'replies' | 'menu'
+type SheetType = 'none' | 'pick' | 'comment' | 'live-question' | 'prayer' | 'announcement' | 'replies' | 'menu'
 
 // Session types that allow Q&A
 const QA_TYPES = ['plenaria', 'oficina', 'talkshow']
@@ -19,11 +19,9 @@ const LIVE_REACTIONS = [
 
 type ProfileModal = { name: string; initials: string; church: string; xp: number; avatar?: string }
 
-const ADMIN_IDS: string[] = ['e75c7904-7b82-479b-8cd1-bb646a8ff7e5'] // giovannaberson@gmail.com aqui
-
 export function HomeScreen() {
   const {
-    missions, feed, authUserId, eventConfig, liveSession, toggleLike, addReaction, addPost,
+    missions, feed, authUserId, user, eventConfig, liveSession, toggleLike, addReaction, addPost,
     submitLiveQuestion, addSheetOpen, setAddSheetOpen, completeMissionByKey, openLiveQuestion,
     setOpenLiveQuestion, refreshLiveSession,
     deletePost,
@@ -53,7 +51,7 @@ export function HomeScreen() {
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null)
   const [menuPostId, setMenuPostId] = useState<string | null>(null)
 
-  const isAdmin = ADMIN_IDS.length > 0 && ADMIN_IDS.includes(authUserId ?? '')
+  const isAdmin = user.role === 'admin'
 
   // Sync addSheetOpen store flag to local sheet state
   useEffect(() => {
@@ -152,7 +150,8 @@ export function HomeScreen() {
       }
       setImgUploading(false)
     }
-    await addPost(sheet === 'prayer' ? 'prayer' : 'comment', postContent, imageUrl, null)
+    const postType = sheet === 'prayer' ? 'prayer' : sheet === 'announcement' ? 'announcement' : 'comment'
+    await addPost(postType, postContent, imageUrl, null)
     setPostContent('')
     setSelectedImage(null)
     setImgPreview(null)
@@ -814,6 +813,7 @@ export function HomeScreen() {
                     desc: 'Compartilhe um pensamento com todos',
                     gradient: 'rgba(255,143,68,.15),rgba(250,20,98,.12)',
                     disabled: false,
+                    adminOnly: false,
                   },
                   {
                     type: 'live-question' as SheetType,
@@ -822,6 +822,7 @@ export function HomeScreen() {
                     desc: 'Envie uma dúvida para a sessão ao vivo',
                     gradient: 'rgba(53,18,106,.12),rgba(77,193,231,.1)',
                     disabled: !liveSession || !liveAllowsQA,
+                    adminOnly: false,
                   },
                   {
                     type: 'prayer' as SheetType,
@@ -830,8 +831,18 @@ export function HomeScreen() {
                     desc: 'Peça apoio da comunidade em oração',
                     gradient: 'rgba(250,20,98,.1),rgba(53,18,106,.08)',
                     disabled: false,
+                    adminOnly: false,
                   },
-                ].map((opt, idx, arr) => (
+                  {
+                    type: 'announcement' as SheetType,
+                    icon: '📢',
+                    title: 'Aviso da organização',
+                    desc: 'Publique um comunicado oficial para todos',
+                    gradient: 'rgba(53,18,106,.15),rgba(250,20,98,.1)',
+                    disabled: false,
+                    adminOnly: true,
+                  },
+                ].filter(opt => !opt.adminOnly || isAdmin).map((opt, idx, arr) => (
                   <div key={opt.type}>
                     <button
                       onClick={() => !opt.disabled && setSheet(opt.type)}
@@ -1154,6 +1165,48 @@ export function HomeScreen() {
                 }}
               >
                 Enviar Pedido 🙏
+              </button>
+            </div>
+          )}
+
+          {/* ANNOUNCEMENT — admin only */}
+          {sheet === 'announcement' && isAdmin && (
+            <div style={{ padding: '20px 20px 32px' }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>
+                📢 Aviso da Organização
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 14 }}>
+                Este aviso será exibido para todos os participantes
+              </div>
+              <textarea
+                placeholder="Digite o comunicado oficial..."
+                value={postContent}
+                onChange={e => setPostContent(e.target.value)}
+                rows={4}
+                autoFocus
+                style={{
+                  width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)',
+                  borderRadius: 12, padding: '13px 15px', color: 'var(--text)', fontSize: 14,
+                  outline: 'none', resize: 'none', marginBottom: 12,
+                  fontFamily: 'var(--font-body)',
+                }}
+                onFocus={e => e.target.style.borderColor = 'var(--pink)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              />
+              <button
+                onClick={handleSubmitPost}
+                disabled={!postContent.trim()}
+                style={{
+                  width: '100%', padding: 14,
+                  background: postContent.trim() ? 'var(--grad-warm)' : 'var(--bg3)',
+                  border: 'none', borderRadius: 12,
+                  color: postContent.trim() ? '#fff' : 'var(--text3)',
+                  fontSize: 14, fontWeight: 700,
+                  cursor: postContent.trim() ? 'pointer' : 'not-allowed',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                Publicar Aviso 📢
               </button>
             </div>
           )}

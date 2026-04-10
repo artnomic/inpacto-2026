@@ -33,6 +33,7 @@ export interface User {
   bio: string
   xp: number
   age: number
+  role?: string
 }
 
 export interface EventConfig {
