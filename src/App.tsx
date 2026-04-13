@@ -14,6 +14,7 @@ import { WishlistScreen } from './screens/WishlistScreen'
 import { LiveScreen } from './screens/LiveScreen'
 import { ProfileScreen } from './screens/ProfileScreen'
 import { ProfileEditScreen } from './screens/ProfileEditScreen'
+import { AdminScreen } from './screens/AdminScreen'
 
 
 function XpToast() {
@@ -74,6 +75,7 @@ function ScreenContent() {
     case 'live':        return <LiveScreen />
     case 'profile':      return <ProfileScreen />
     case 'profile-edit': return <ProfileEditScreen />
+    case 'admin':        return <AdminScreen />
     default:             return <SplashScreen />
   }
 }
@@ -112,7 +114,7 @@ function CelebrationModal() {
 export default function App() {
   const { currentScreen, initAuth } = useAppStore()
   const isAuth = authScreens.includes(currentScreen)
-  const showTopbar = !isAuth && currentScreen !== 'live' && currentScreen !== 'profile-edit' && currentScreen !== 'wishlist'
+  const showTopbar = !isAuth && currentScreen !== 'live' && currentScreen !== 'profile-edit' && currentScreen !== 'wishlist' && currentScreen !== 'admin'
   useEffect(() => { initAuth() }, [])
 
   return (

@@ -20,6 +20,7 @@ export type Screen =
   | 'wishlist'
   | 'notes'
   | 'note-editor'
+  | 'admin'
 
 export interface User {
   id: string

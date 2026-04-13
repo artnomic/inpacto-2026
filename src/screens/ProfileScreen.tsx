@@ -227,6 +227,22 @@ export function ProfileScreen() {
             </div>
           </div>
 
+          {/* Admin panel */}
+          {user.role === 'admin' && (
+            <button
+              onClick={() => navigateTo('admin')}
+              style={{
+                width: '100%', padding: 14,
+                background: 'rgba(250,20,98,0.06)', border: '1.5px solid rgba(250,20,98,0.3)',
+                borderRadius: 14, color: 'var(--pink)', fontSize: 14, fontWeight: 600,
+                cursor: 'pointer', marginBottom: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              <span>📡</span> Painel Admin — Controle Ao Vivo
+            </button>
+          )}
+
           {/* Logout */}
           <button
             onClick={logout}
