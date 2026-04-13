@@ -91,7 +91,7 @@ export interface Session {
   day: number
   title: string
   speaker: string
-  type: 'plenaria' | 'louvor' | 'oficina' | 'talkshow' | 'break' | 'especial'
+  type: 'palestra' | 'plenaria' | 'louvor' | 'oficina' | 'talkshow' | 'break' | 'especial' | 'intervalo' | 'grupo' | 'encerramento'
   startTime: string
   endTime: string
   description: string
