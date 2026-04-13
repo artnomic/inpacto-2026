@@ -5,7 +5,7 @@ import type { Screen } from '../store/appStore'
 export function Navbar() {
   const { currentScreen, navigateTo, setAddSheetOpen } = useAppStore()
 
-  const authScreens: Screen[] = ['splash', 'login', 'signup', 'verify', 'profile-setup']
+  const authScreens: Screen[] = ['splash', 'login', 'profile-setup']
   if (authScreens.includes(currentScreen)) return null
 
   const navItem = (screen: Screen, label: string, icon: ReactElement) => {

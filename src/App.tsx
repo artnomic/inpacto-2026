@@ -5,8 +5,6 @@ import { Topbar } from './components/Topbar'
 
 import { SplashScreen } from './screens/SplashScreen'
 import { LoginScreen } from './screens/LoginScreen'
-import { SignupScreen } from './screens/SignupScreen'
-import { VerifyScreen } from './screens/VerifyScreen'
 import { ProfileSetupScreen } from './screens/ProfileSetupScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { AgendaScreen } from './screens/AgendaScreen'
@@ -59,7 +57,7 @@ function GlobalToast() {
     </div>
   )
 }
-const authScreens = ['splash', 'login', 'signup', 'verify', 'profile-setup']
+const authScreens = ['splash', 'login', 'profile-setup']
 
 function ScreenContent() {
   const { currentScreen } = useAppStore()
@@ -67,8 +65,6 @@ function ScreenContent() {
   switch (currentScreen) {
     case 'splash':       return <SplashScreen />
     case 'login':        return <LoginScreen />
-    case 'signup':       return <SignupScreen />
-    case 'verify':       return <VerifyScreen />
     case 'profile-setup': return <ProfileSetupScreen />
     case 'home':         return <HomeScreen />
     case 'agenda':       return <AgendaScreen />

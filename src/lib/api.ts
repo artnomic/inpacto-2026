@@ -5,45 +5,31 @@ import type {
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 
-export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) throw error
-  return data
-}
+// Login by email only — no password, no Supabase Auth session.
+// Looks up the profile directly; only pre-registered emails can log in.
+export async function loginByEmail(email: string): Promise<User> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('email', email.toLowerCase().trim())
+    .single()
 
-export async function signUp(email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { emailRedirectTo: undefined },
-  })
-  if (error) throw error
-  return data
-}
+  if (error || !data) {
+    throw new Error('E-mail não encontrado. Verifique e tente novamente.')
+  }
 
-export async function signOut() {
-  const { error } = await supabase.auth.signOut()
-  if (error) throw error
-}
-
-export async function getSession() {
-  const { data } = await supabase.auth.getSession()
-  return data.session
-}
-
-export async function resendVerification(email: string) {
-  const { error } = await supabase.auth.resend({ type: 'signup', email })
-  if (error) throw error
-}
-
-export async function verifyOtp(email: string, token: string) {
-  const { data, error } = await supabase.auth.verifyOtp({
-    email,
-    token,
-    type: 'signup',
-  })
-  if (error) throw error
-  return data
+  return {
+    id: data.id,
+    name: data.name ?? '',
+    email: data.email ?? '',
+    avatar: data.avatar_url ?? '',
+    church: data.church ?? '',
+    city: data.city ?? '',
+    bio: data.bio ?? '',
+    xp: data.xp ?? 0,
+    age: data.age ?? undefined,
+    role: data.role ?? 'user',
+  }
 }
 
 // ─── EVENT CONFIG ─────────────────────────────────────────────────────────────
@@ -111,17 +97,10 @@ export async function upsertProfile(userId: string, updates: Partial<User>) {
   if (error) throw error
 }
 
-// RPC: increment_xp uses auth.uid() internally — no userId needed
-export async function addXp(amount: number) {
-  const { error } = await supabase.rpc('increment_xp', { amount })
-  if (error) {
-    // Fallback: direct update for the authenticated user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data } = await supabase.from('profiles').select('xp').eq('id', user.id).single()
-    const newXp = (data?.xp ?? 0) + amount
-    await supabase.from('profiles').update({ xp: newXp }).eq('id', user.id)
-  }
+export async function addXp(userId: string, amount: number) {
+  const { data } = await supabase.from('profiles').select('xp').eq('id', userId).single()
+  const newXp = (data?.xp ?? 0) + amount
+  await supabase.from('profiles').update({ xp: newXp }).eq('id', userId)
 }
 
 // ─── SESSIONS ─────────────────────────────────────────────────────────────────
@@ -288,8 +267,7 @@ export async function completeMission(userId: string, missionId: string, xpRewar
 
   if (error) throw error
 
-  // RPC uses auth.uid() — no need to pass userId
-  await addXp(xpReward)
+  await addXp(userId, xpReward)
 }
 
 // ─── ACHIEVEMENTS ─────────────────────────────────────────────────────────────
@@ -316,11 +294,27 @@ export async function getAchievements(userId: string): Promise<Achievement[]> {
   }))
 }
 
-// RPC: check and unlock an achievement by key
-export async function checkAchievement(key: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc('check_and_unlock_achievement', { achievement_key: key })
-  if (error) return false
-  return data === true
+// Check and unlock an achievement by key for a given user (no auth.uid() dependency)
+export async function checkAchievement(userId: string, key: string): Promise<boolean> {
+  const { data: ach } = await supabase
+    .from('achievements')
+    .select('id')
+    .eq('key', key)
+    .single()
+  if (!ach) return false
+
+  const { data: existing } = await supabase
+    .from('user_achievements')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('achievement_id', ach.id)
+    .maybeSingle()
+  if (existing) return false
+
+  const { error } = await supabase
+    .from('user_achievements')
+    .insert({ user_id: userId, achievement_id: ach.id })
+  return !error
 }
 
 // ─── LIVE QUESTIONS ───────────────────────────────────────────────────────────
@@ -547,6 +541,7 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
   await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId)
   return publicUrl
 }
+
 export async function uploadPostImage(userId: string, file: File): Promise<string> {
   const ext = file.name.split('.').pop()
   const path = `${userId}/${Date.now()}.${ext}`
@@ -555,7 +550,6 @@ export async function uploadPostImage(userId: string, file: File): Promise<strin
   const { data } = supabase.storage.from('post-images').getPublicUrl(path)
   return data.publicUrl
 }
-
 
 export async function deletePost(postId: string, userId: string, isAdmin = false) {
   let query = supabase.from('feed_posts').delete().eq('id', postId)

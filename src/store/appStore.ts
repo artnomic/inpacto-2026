@@ -9,8 +9,6 @@ let _liveChannel: ReturnType<typeof supabase.channel> | null = null
 export type Screen =
   | 'splash'
   | 'login'
-  | 'signup'
-  | 'verify'
   | 'profile-setup'
   | 'home'
   | 'agenda'
@@ -148,7 +146,6 @@ interface AppState {
   previousScreen: Screen | null
   // Auth
   authUserId: string | null
-  pendingEmail: string | null
   // Data
   user: User
   eventConfig: EventConfig | null
@@ -175,11 +172,8 @@ interface AppState {
   navigateTo: (screen: Screen) => void
   goBack: () => void
   // Auth actions
-  login: (email: string, password: string) => Promise<void>
-  signup: (email: string, password: string) => Promise<void>
-  verifyEmail: (code: string) => Promise<void>
-  logout: () => Promise<void>
-  setPendingEmail: (email: string) => void
+  login: (email: string) => Promise<void>
+  logout: () => void
   initAuth: () => Promise<void>
   // Data loading
   loadInitialData: (userId: string) => Promise<void>
@@ -218,7 +212,6 @@ export const useAppStore = create<AppState>()(
   currentScreen: 'splash',
   previousScreen: null,
   authUserId: null,
-  pendingEmail: null,
   user: EMPTY_USER,
   eventConfig: null,
   missions: [],
@@ -242,104 +235,41 @@ export const useAppStore = create<AppState>()(
 
   navigateTo: (screen) => set((s) => ({ currentScreen: screen, previousScreen: s.currentScreen })),
   goBack: () => set((s) => ({ currentScreen: s.previousScreen ?? 'home', previousScreen: null })),
-  setPendingEmail: (email) => set({ pendingEmail: email }),
 
-  // Auth
+  // Auth: check persisted userId from localStorage (no Supabase Auth session needed)
   initAuth: async () => {
-    const session = await api.getSession()
-    if (session?.user) {
-      const userId = session.user.id
-      set({ authUserId: userId })
-      const profile = await api.getProfile(userId)
-      if (profile && profile.name) {
+    const { authUserId } = get()
+    if (authUserId) {
+      const profile = await api.getProfile(authUserId)
+      if (profile) {
         set({ user: profile })
-        await get().loadInitialData(userId)
-        if (
-          profile.name?.trim() &&
-          profile.age &&
-          profile.city?.trim() &&
-          profile.church?.trim() &&
-          profile.bio?.trim()
-        ) {
-          get().completeMissionByKey('complete_profile')
-        }
+        await get().loadInitialData(authUserId)
         set({ currentScreen: 'home' })
       } else {
-        set({ currentScreen: 'profile-setup' })
+        // Profile no longer exists — reset
+        set({ authUserId: null, user: EMPTY_USER, currentScreen: 'login' })
       }
     } else {
       set({ currentScreen: 'login' })
     }
   },
 
-  login: async (email, password) => {
+  login: async (email) => {
     set({ loading: true })
     try {
-      const data = await api.signIn(email, password)
-      const userId = data.user?.id
-      if (!userId) throw new Error('Login falhou')
-      set({ authUserId: userId })
-      const profile = await api.getProfile(userId)
-      if (profile && profile.name) {
-        set({ user: profile })
-        await get().loadInitialData(userId)
-        if (
-          profile.name?.trim() &&
-          profile.age &&
-          profile.city?.trim() &&
-          profile.church?.trim() &&
-          profile.bio?.trim()
-        ) {
-          get().completeMissionByKey('complete_profile')
-        }
-        set({ currentScreen: 'home', loading: false })
-      } else {
-        set({ user: { ...EMPTY_USER, id: userId, email }, currentScreen: 'profile-setup', loading: false })
-      }
+      const profile = await api.loginByEmail(email)
+      set({ authUserId: profile.id, user: profile })
+      await get().loadInitialData(profile.id)
+      set({ currentScreen: 'home', loading: false })
     } catch (err) {
       set({ loading: false })
       throw err
     }
   },
 
-  signup: async (email, password) => {
-    set({ loading: true })
-    try {
-      await api.signUp(email, password)
-      set({ pendingEmail: email, currentScreen: 'verify', loading: false })
-    } catch (err) {
-      set({ loading: false })
-      throw err
-    }
-  },
-
-  verifyEmail: async (code) => {
-    const { pendingEmail } = get()
-    if (!pendingEmail) throw new Error('E-mail nao encontrado. Tente fazer o cadastro novamente.')
-    set({ loading: true })
-    try {
-      const data = await api.verifyOtp(pendingEmail, code)
-      const userId = data.user?.id
-      if (!userId) throw new Error('Verificacao falhou. Tente novamente.')
-      set({ authUserId: userId, loading: false })
-      const profile = await api.getProfile(userId)
-      if (profile && profile.name) {
-        set({ user: profile })
-        await get().loadInitialData(userId)
-        set({ currentScreen: 'home' })
-      } else {
-        set({ user: { ...EMPTY_USER, id: userId, email: pendingEmail }, currentScreen: 'profile-setup' })
-      }
-    } catch (err) {
-      set({ loading: false })
-      throw err
-    }
-  },
-
-  logout: async () => {
+  logout: () => {
     if (_feedChannel) { supabase.removeChannel(_feedChannel); _feedChannel = null }
     if (_liveChannel) { supabase.removeChannel(_liveChannel); _liveChannel = null }
-    await api.signOut()
     set({
       authUserId: null,
       user: EMPTY_USER,
@@ -467,8 +397,8 @@ export const useAppStore = create<AppState>()(
     try {
       await api.completeMission(authUserId, id, mission.xpReward)
       if (mission.key === 'checkin') {
-        api.checkAchievement('boas_vindas').catch(() => {})
-        api.checkAchievement('madrugador').catch(() => {})
+        api.checkAchievement(authUserId, 'boas_vindas').catch(() => {})
+        api.checkAchievement(authUserId, 'madrugador').catch(() => {})
       }
       get().loadAchievements()
     } catch {
@@ -488,7 +418,7 @@ export const useAppStore = create<AppState>()(
     if (!authUserId || !content.trim()) return
     await api.submitLiveQuestion(authUserId, sessionId, content)
     get().completeMissionByKey('ask_speaker')
-    api.checkAchievement('pergunta_viva').then(() => get().loadAchievements()).catch(() => {})
+    api.checkAchievement(authUserId, 'pergunta_viva').then(() => get().loadAchievements()).catch(() => {})
   },
 
   setLiveSession: async (sessionId) => {
@@ -598,7 +528,7 @@ export const useAppStore = create<AppState>()(
       if (type === 'comment') {
         get().completeMissionByKey('comment')
       }
-      api.checkAchievement('feed_ativo').then(() => get().loadAchievements()).catch(() => {})
+      api.checkAchievement(authUserId, 'feed_ativo').then(() => get().loadAchievements()).catch(() => {})
     } catch {
       if (parentId) {
         set((s) => ({
@@ -628,7 +558,7 @@ export const useAppStore = create<AppState>()(
         get().completeMissionByKey('wishlist_2')
       }
       if (newCount >= 3) {
-        api.checkAchievement('wishlist_cheia').then(() => get().loadAchievements()).catch(() => {})
+        api.checkAchievement(authUserId, 'wishlist_cheia').then(() => get().loadAchievements()).catch(() => {})
       }
     }
     api.toggleWishlist(authUserId, productId, wasInWishlist).catch(() => {

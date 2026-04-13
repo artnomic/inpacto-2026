@@ -2,25 +2,18 @@ import { useState } from 'react'
 import { useAppStore } from '../store/appStore'
 
 export function LoginScreen() {
-  const { navigateTo, login, loading } = useAppStore()
+  const { login, loading } = useAppStore()
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
   const handleLogin = async () => {
-    if (!email || !password) return
+    if (!email.trim()) return
     setError('')
     try {
-      await login(email, password)
-    } catch (err: unknown)  {
+      await login(email.trim())
+    } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao entrar'
-      if (msg.includes('Invalid login') || msg.includes('invalid_credentials')) {
-        setError('E-mail ou senha incorretos')
-      } else if (msg.includes('Email not confirmed')) {
-        setError('Confirme seu e-mail antes de entrar')
-      } else {
-        setError(msg)
-      }
+      setError(msg)
     }
   }
 
@@ -32,7 +25,7 @@ export function LoginScreen() {
     }}>
       {/* Full-screen background image */}
       <img
-                src="/saturados-splash.jpg"
+        src="/saturados-splash.jpg"
         alt=""
         style={{
           position: 'absolute', inset: 0,
@@ -59,7 +52,7 @@ export function LoginScreen() {
           Bem-vindo! 👋
         </div>
         <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 24, fontWeight: 500 }}>
-          Entre para viver a conferência
+          Entre com seu e-mail para acessar a conferência
         </div>
 
         {error && (
@@ -72,7 +65,7 @@ export function LoginScreen() {
           </div>
         )}
 
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 24 }}>
           <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 6, display: 'block', letterSpacing: '0.2px' }}>
             E-mail
           </label>
@@ -81,26 +74,6 @@ export function LoginScreen() {
             placeholder="seu@email.com"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            style={{
-              width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)',
-              borderRadius: 'var(--radius-sm)', padding: '13px 15px',
-              color: 'var(--text)', fontSize: 14, outline: 'none',
-              transition: 'border-color 0.2s',
-            }}
-            onFocus={e => e.target.style.borderColor = 'var(--pink)'}
-            onBlur={e => e.target.style.borderColor = 'var(--border)'}
-          />
-        </div>
-
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 6, display: 'block', letterSpacing: '0.2px' }}>
-            Senha
-          </label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
             style={{
               width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)',
@@ -115,32 +88,19 @@ export function LoginScreen() {
 
         <button
           onClick={handleLogin}
-          disabled={loading || !email || !password}
+          disabled={loading || !email.trim()}
           style={{
             width: '100%', padding: 15, background: loading ? 'var(--text3)' : 'var(--grad-warm)',
             border: 'none', borderRadius: 'var(--radius-sm)',
             color: 'white', fontSize: 14, fontWeight: 700,
-            cursor: loading ? 'not-allowed' : 'pointer', marginBottom: 12, letterSpacing: '0.3px',
+            cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '0.3px',
             transition: 'opacity 0.2s, transform 0.12s',
-            opacity: (!email || !password) ? 0.6 : 1,
+            opacity: !email.trim() ? 0.6 : 1,
           }}
           onMouseDown={e => { if (!loading) { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'scale(0.98)' } }}
           onMouseUp={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1)' }}
         >
           {loading ? 'Entrando...' : 'Entrar'}
-        </button>
-
-        <button
-          onClick={() => navigateTo('signup')}
-          disabled={loading}
-          style={{
-            width: '100%', padding: 13, background: 'transparent',
-            border: '1.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
-            color: 'var(--text2)', fontSize: 13, fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          Primeiro acesso? Cadastre-se
         </button>
       </div>
     </div>
