@@ -79,9 +79,13 @@ export function LiveScreen() {
   }
 
   function handleReaction(emoji: string) {
-    if (userReacted[emoji]) return
-    setReactions(prev => ({ ...prev, [emoji]: (prev[emoji] || 0) + 1 }))
-    setUserReacted(prev => ({ ...prev, [emoji]: true }))
+    if (userReacted[emoji]) {
+      setReactions(prev => ({ ...prev, [emoji]: Math.max((prev[emoji] || 1) - 1, 0) }))
+      setUserReacted(prev => ({ ...prev, [emoji]: false }))
+    } else {
+      setReactions(prev => ({ ...prev, [emoji]: (prev[emoji] || 0) + 1 }))
+      setUserReacted(prev => ({ ...prev, [emoji]: true }))
+    }
   }
 
   async function handleSubmitQuestion() {

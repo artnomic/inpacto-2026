@@ -446,21 +446,23 @@ export async function toggleReaction(userId: string, postId: string, emoji: stri
 
 export async function getRanking(): Promise<RankingUser[]> {
   const { data, error } = await supabase
-    .from('ranking')
-    .select('*')
-    .order('position')
+    .from('profiles')
+    .select('id, name, church, avatar_url, xp')
+    .neq('role', 'admin')
+    .not('name', 'is', null)
+    .neq('name', '')
+    .order('xp', { ascending: false })
     .limit(50)
 
   if (error || !data) return []
 
-  // The ranking view already includes avatar_url — no secondary query needed
-  return data.map(r => ({
+  return data.map((r, i) => ({
     id: r.id,
     name: r.name ?? 'Usuário',
     initials: (r.name ?? 'U').split(' ').slice(0, 2).map((w: string) => w[0]).join(''),
     church: r.church ?? '',
     xp: r.xp ?? 0,
-    position: r.position ?? 0,
+    position: i + 1,
     avatar: (r.avatar_url as string | null) ?? undefined,
   }))
 }
