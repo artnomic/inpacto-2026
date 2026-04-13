@@ -12,8 +12,6 @@ interface LiveQuestion {
 
 const EMOJIS = ['🙌', '🔥', '❤️', '🙏', '⚡']
 
-const ADMIN_IDS: string[] = ['e75c7904-7b82-479b-8cd1-bb646a8ff7e5'] // giovannaberson@gmail.com
-
 function typeColor(type: string) {
   const map: Record<string, string> = {
     plenaria: 'var(--pink)', louvor: '#7c3aed', oficina: '#0891b2',
@@ -35,7 +33,7 @@ function initials(name: string) {
 }
 
 export function LiveScreen() {
-  const { liveSession, sessions, submitLiveQuestion, refreshLiveSession, setLiveSession, authUserId } = useAppStore()
+  const { liveSession, sessions, submitLiveQuestion, refreshLiveSession, setLiveSession, authUserId, user } = useAppStore()
   const [reactions, setReactions] = useState<Record<string, number>>({})
   const [userReacted, setUserReacted] = useState<Record<string, boolean>>({})
   const [questions, setQuestions] = useState<LiveQuestion[]>([])
@@ -45,7 +43,7 @@ export function LiveScreen() {
   const [toggling, setToggling] = useState<string | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
 
-  const isAdmin = ADMIN_IDS.includes(authUserId ?? '')
+  const isAdmin = user.role === 'admin'
 
   // Refresh live session on mount and every 60s (fallback for time-based detection)
   useEffect(() => {
@@ -59,12 +57,16 @@ export function LiveScreen() {
   }, [liveSession])
 
   async function loadQuestions(sessionId: string) {
-    const { data } = await supabase
+    let query = supabase
       .from('live_questions')
       .select('id, content, user_id, created_at, profiles(name)')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: false })
       .limit(50)
+    if (!isAdmin) {
+      query = query.eq('user_id', user.id)
+    }
+    const { data } = await query
     if (data) {
       setQuestions(data.map((q: any) => ({
         id: q.id,

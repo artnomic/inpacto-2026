@@ -537,7 +537,7 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
   const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
   if (error) throw error
   const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-  const publicUrl = data.publicUrl
+  const publicUrl = `${data.publicUrl}?t=${Date.now()}`
   await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId)
   return publicUrl
 }

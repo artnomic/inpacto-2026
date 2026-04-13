@@ -5,9 +5,6 @@ import type { Session } from '../store/appStore'
 // Types that get a full highlighted card
 const CARD_TYPES = new Set(['palestra', 'plenaria', 'louvor', 'talkshow', 'oficina', 'especial'])
 
-// Types that allow notes/questions
-const NOTES_QUESTIONS_TYPES = ['palestra', 'plenaria', 'oficina', 'talkshow']
-
 const TYPE_CONFIG: Record<string, { label: string; color: string; textColor: string }> = {
   palestra:     { label: 'Palestra',    color: 'rgba(53,18,106,0.08)',   textColor: '#35126A' },
   plenaria:     { label: 'Plenária',    color: 'rgba(53,18,106,0.08)',   textColor: '#35126A' },
@@ -40,7 +37,7 @@ const DAY_INFO = [
 ]
 
 export function AgendaScreen() {
-  const { sessions, navigateTo, setActiveNote, setOpenLiveQuestion } = useAppStore()
+  const { sessions } = useAppStore()
   const [day1Open, setDay1Open] = useState(true)
   const [day2Open, setDay2Open] = useState(false)
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
@@ -271,39 +268,6 @@ export function AgendaScreen() {
               </div>
             )}
 
-            {/* Actions — only for palestra, plenaria, oficina, talkshow */}
-            {NOTES_QUESTIONS_TYPES.includes(selectedSession.type) && (
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button
-                  onClick={() => {
-                    setActiveNote(selectedSession.id)
-                    setSelectedSession(null)
-                    navigateTo('note-editor')
-                  }}
-                  style={{
-                    flex: 1, padding: 13,
-                    background: 'var(--bg2)',
-                    border: '1.5px solid var(--border)',
-                    borderRadius: 12, fontSize: 13, fontWeight: 700,
-                    cursor: 'pointer', color: 'var(--text2)',
-                  }}
-                >
-                  📝 Anotações
-                </button>
-                <button
-                  onClick={() => { setOpenLiveQuestion(true); setSelectedSession(null); navigateTo('home') }}
-                  style={{
-                    flex: 1, padding: 13,
-                    background: 'var(--grad-warm)',
-                    border: 'none',
-                    borderRadius: 12, fontSize: 13, fontWeight: 700,
-                    cursor: 'pointer', color: '#fff',
-                  }}
-                >
-                  🎯 Enviar pergunta
-                </button>
-              </div>
-            )}
           </div>
         </>
       )}
