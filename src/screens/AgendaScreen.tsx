@@ -268,6 +268,18 @@ export function AgendaScreen() {
               </div>
             )}
 
+            <button
+              onClick={() => setSelectedSession(null)}
+              style={{
+                width: '100%', padding: 13,
+                background: 'var(--bg2)',
+                border: '1.5px solid var(--border)',
+                borderRadius: 12, fontSize: 13, fontWeight: 700,
+                cursor: 'pointer', color: 'var(--text2)',
+              }}
+            >
+              Fechar
+            </button>
           </div>
         </>
       )}

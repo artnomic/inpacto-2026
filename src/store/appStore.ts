@@ -492,6 +492,7 @@ export const useAppStore = create<AppState>()(
       userId: authUserId,
       userName: user.name,
       userInitials: user.name.split(' ').slice(0, 2).map(w => w[0]).join(''),
+      userAvatar: user.avatar || undefined,
       church: user.church,
       userXp: user.xp,
       type,
