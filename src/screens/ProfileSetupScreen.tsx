@@ -18,7 +18,7 @@ export function ProfileSetupScreen() {
       await updateProfile({ name: name.trim(), age: parseInt(age) || 17, city, church, bio })
       if (authUserId) await loadInitialData(authUserId)
       // First-time profile setup: fire boas_vindas achievement in background
-      checkAchievement('boas_vindas').then(() => loadAchievements()).catch(() => {})
+      if (authUserId) checkAchievement(authUserId, 'boas_vindas').then(() => loadAchievements()).catch(() => {})
       if (name.trim() && parseInt(age) && city.trim() && church.trim() && bio.trim()) {
         completeMissionByKey('complete_profile')
       }
