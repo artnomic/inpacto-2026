@@ -362,12 +362,27 @@ export async function approveAdminMission(
   winnerXp: number,
   participationXp: number
 ): Promise<void> {
+  // Guard: ensure no winner already exists for this mission
+  const { data: existing } = await supabase
+    .from('user_missions')
+    .select('id')
+    .eq('mission_id', missionId)
+    .eq('status', 'completed')
+    .limit(1)
+  if (existing && existing.length > 0) {
+    throw new Error('Já existe um vencedor para esta missão')
+  }
+
   // Mark winner as completed and credit full XP
-  const { error: winnerError } = await supabase
+  const { data: winnerData, error: winnerError } = await supabase
     .from('user_missions')
     .update({ status: 'completed' })
     .eq('id', winnerUserMissionId)
+    .select()
   if (winnerError) throw winnerError
+  if (!winnerData || winnerData.length === 0) {
+    throw new Error('Não foi possível atualizar a missão. Verifique as permissões.')
+  }
   await addXp(winnerUserId, winnerXp)
 
   // Get all other pending submissions for this mission
