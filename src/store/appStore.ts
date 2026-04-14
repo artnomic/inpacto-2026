@@ -54,6 +54,8 @@ export interface Achievement {
   description: string
   unlocked: boolean
   unlockedAt?: string
+  conditionKey?: string
+  conditionValue?: number
 }
 
 export interface Mission {
@@ -406,7 +408,9 @@ export const useAppStore = create<AppState>()(
         api.checkAchievement(authUserId, 'boas_vindas').catch(() => {})
         api.checkAchievement(authUserId, 'madrugador').catch(() => {})
       }
-      get().loadAchievements()
+      api.checkAndUnlockAchievements(authUserId)
+        .catch(() => {})
+        .finally(() => get().loadAchievements())
     } catch {
       set((s) => ({
         missions: s.missions.map(m => m.id === id ? { ...m, completed: false } : m),

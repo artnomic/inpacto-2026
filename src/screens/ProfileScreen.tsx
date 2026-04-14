@@ -5,6 +5,23 @@ import { uploadAvatar, upsertProfile } from '../lib/api'
 const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 2000, 3000]
 const LEVEL_NAMES = ['Novo', 'Participante', 'Engajado', 'Comprometido', 'Saturado', 'Líder']
 
+function getConditionText(conditionKey?: string, conditionValue?: number): string {
+  if (!conditionKey) return ''
+  const v = conditionValue ?? 1
+  switch (conditionKey) {
+    case 'states_count': return `Conversar com pessoas de ${v} estados diferentes`
+    case 'eixo_dopamina_complete': return 'Completar todas as missões do eixo Dopamina'
+    case 'connections_count': return `Fazer ${v} ou mais conexões com pessoas novas`
+    case 'questions_count': return `Enviar perguntas em ${v} ou mais palestras`
+    case 'quizzes_complete': return 'Completar todos os quizzes de palestra'
+    case 'checkins_complete': return 'Fazer check-in nos 2 momentos de louvor'
+    case 'top3_ranking': return 'Estar no Top 3 do ranking ao final da conferência'
+    case 'missions_count': return `Completar ${v} ou mais missões`
+    case 'won_screen_time': return 'Vencer a missão de menor tempo de tela em qualquer dia'
+    default: return ''
+  }
+}
+
 export function ProfileScreen() {
   const { user, missions, achievements, navigateTo, logout } = useAppStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -205,12 +222,12 @@ export function ProfileScreen() {
                 <div
                   key={a.id}
                   title={a.title + ': ' + a.description}
-                  onClick={() => a.unlocked && setSelectedAchievement(a)}
+                  onClick={() => setSelectedAchievement(a)}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                     opacity: a.unlocked ? 1 : 0.35,
                     filter: a.unlocked ? 'none' : 'grayscale(1)',
-                    cursor: a.unlocked ? 'pointer' : 'default',
+                    cursor: 'pointer',
                   }}
                 >
                   <div style={{
@@ -269,16 +286,33 @@ export function ProfileScreen() {
               <div style={{ width: 36, height: 4, background: 'var(--bg3)', borderRadius: 2 }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, paddingTop: 8 }}>
-              <div style={{ width: 72, height: 72, borderRadius: 18, background: 'rgba(250,20,98,0.1)',
+              <div style={{
+                width: 72, height: 72, borderRadius: 18,
+                background: selectedAchievement.unlocked ? 'rgba(250,20,98,0.1)' : 'var(--bg3)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
-                border: '2px solid rgba(250,20,98,0.2)' }}>{selectedAchievement.icon}</div>
+                border: selectedAchievement.unlocked ? '2px solid rgba(250,20,98,0.2)' : '2px solid var(--border)',
+                filter: selectedAchievement.unlocked ? 'none' : 'grayscale(1)',
+                opacity: selectedAchievement.unlocked ? 1 : 0.6,
+              }}>{selectedAchievement.icon}</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', textAlign: 'center' }}>{selectedAchievement.title}</div>
               <div style={{ fontSize: 14, color: 'var(--text3)', textAlign: 'center', lineHeight: 1.5 }}>{selectedAchievement.description}</div>
-              {selectedAchievement.unlockedAt && (
-                <div style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 600 }}>
-                  Desbloqueado em {new Date(selectedAchievement.unlockedAt).toLocaleDateString('pt-BR')}
+              {getConditionText(selectedAchievement.conditionKey, selectedAchievement.conditionValue) && (
+                <div style={{
+                  background: 'var(--bg3)', borderRadius: 10, padding: '10px 14px',
+                  fontSize: 13, color: 'var(--text2)', textAlign: 'center', lineHeight: 1.5,
+                  width: '100%',
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>
+                    Como conquistar
+                  </div>
+                  {getConditionText(selectedAchievement.conditionKey, selectedAchievement.conditionValue)}
                 </div>
               )}
+              <div style={{ fontSize: 13, fontWeight: 700, color: selectedAchievement.unlocked ? '#22c55e' : 'var(--text3)' }}>
+                {selectedAchievement.unlocked
+                  ? `✅ Conquistada em ${new Date(selectedAchievement.unlockedAt).toLocaleDateString('pt-BR')}`
+                  : '🔒 Ainda não conquistada'}
+              </div>
             </div>
           </div>
         </>
