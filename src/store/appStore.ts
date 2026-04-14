@@ -423,7 +423,7 @@ export const useAppStore = create<AppState>()(
     const { authUserId } = get()
     if (!authUserId || !content.trim()) return
     await api.submitLiveQuestion(authUserId, sessionId, content)
-    get().completeMissionByKey('ask_speaker')
+    get().completeMissionByKey('pergunta_palestra')
     api.checkAchievement(authUserId, 'pergunta_viva').then(() => get().loadAchievements()).catch(() => {})
   },
 
@@ -645,15 +645,39 @@ export const useAppStore = create<AppState>()(
   },
 
   completeMissionByKey: (key: string) => {
-    const { missions, eventConfig } = get()
-    if (!eventConfig) return
-    const startDate = new Date(eventConfig.eventStartDate + 'T00:00:00')
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const diff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-    const currentDay = diff < 0 ? 1 : diff >= eventConfig.totalDays ? eventConfig.totalDays : diff + 1
-    const mission = missions.find(m => m.key === key && m.day === currentDay && !m.completed)
-    if (mission) get().completeMission(mission.id)
+    const { missions, eventConfig, authUserId } = get()
+    if (!authUserId) return
+
+    let currentDay: number | null = null
+    if (eventConfig) {
+      const startDate = new Date(eventConfig.eventStartDate + 'T00:00:00')
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const diff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+      currentDay = diff < 0 ? 1 : diff >= eventConfig.totalDays ? eventConfig.totalDays : diff + 1
+    }
+
+    // Match mission by key: day=null (applies to all days) OR day=currentDay
+    const matchFn = (m: Mission) =>
+      m.key === key &&
+      (m.day === null || (currentDay !== null && m.day === currentDay)) &&
+      !m.completed
+
+    const mission = missions.find(matchFn)
+    if (mission) {
+      get().completeMission(mission.id)
+      return
+    }
+
+    // Fallback: missions may be empty or stale — refresh from DB and retry
+    ;(async () => {
+      try {
+        const freshMissions = await api.getMissionsWithStatus(authUserId)
+        set({ missions: freshMissions })
+        const fresh = freshMissions.find(matchFn)
+        if (fresh) get().completeMission(fresh.id)
+      } catch { /* ignore */ }
+    })()
   },
 
   setOpenLiveQuestion: (v: boolean) => set({ openLiveQuestion: v }),
