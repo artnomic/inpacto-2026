@@ -391,6 +391,31 @@ export async function completeMission(userId: string, missionId: string, xpRewar
   }
 }
 
+export async function toggleMissionActive(missionId: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('missions')
+    .update({ is_active: isActive })
+    .eq('id', missionId)
+  if (error) throw error
+}
+
+export async function getAllMissions(): Promise<{ id: string; title: string; icon: string; day: number | null; isActive: boolean; type: string }[]> {
+  const { data, error } = await supabase
+    .from('missions')
+    .select('id, title, icon, day, is_active, type')
+    .order('day', { nullsFirst: false })
+    .order('order_index')
+  if (error) throw error
+  return (data ?? []).map(m => ({
+    id: m.id,
+    title: m.title,
+    icon: m.icon,
+    day: m.day ?? null,
+    isActive: m.is_active ?? true,
+    type: m.type ?? 'auto',
+  }))
+}
+
 // ─── ACHIEVEMENTS ─────────────────────────────────────────────────────────────
 
 export async function getAchievements(userId: string): Promise<Achievement[]> {
