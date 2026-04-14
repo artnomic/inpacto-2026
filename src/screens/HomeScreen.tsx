@@ -18,6 +18,15 @@ const LIVE_REACTIONS = [
   { emoji: '\uD83D\uDE4C', label: 'Louvor' },
 ]
 
+const MISSION_TYPE_BADGE: Record<string, { label: string; color: string; bg: string }> = {
+  auto:     { label: 'Automática',   color: '#6B7280', bg: 'rgba(107,114,128,0.12)' },
+  text:     { label: 'Responder',    color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
+  evidence: { label: 'Enviar foto',  color: '#F97316', bg: 'rgba(249,115,22,0.12)' },
+  quiz:     { label: 'Quiz',         color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
+  checkin:  { label: 'Check-in',     color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
+  admin:    { label: 'Admin escolhe',color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
+}
+
 type ProfileModal = { name: string; initials: string; church: string; xp: number; avatar?: string }
 
 export function HomeScreen() {
@@ -40,7 +49,6 @@ export function HomeScreen() {
     }
   }, [openLiveQuestion])
 
-  const [missionsExpanded, setMissionsExpanded] = useState(false)
   const [questionSent, setQuestionSent] = useState(false)
   const [activeReactions, setActiveReactions] = useState<Record<string, boolean>>({})
   const [profileModal, setProfileModal] = useState<ProfileModal | null>(null)
@@ -233,8 +241,8 @@ export function HomeScreen() {
   }
 
   function openMission(m: Mission) {
-    if (m.completed || m.type === 'auto') return
-    if (!m.isActive) return
+    if (m.isActive === false) return
+    if (m.type === 'auto' && !m.completed) return
     setActiveMission(m)
     setMissionText('')
     setMissionFile(null)
@@ -337,12 +345,6 @@ export function HomeScreen() {
   const commentsPost = feed.find(p => p.id === commentsPostId) ?? null
   const menuPost = feed.find(p => p.id === menuPostId) ?? null
 
-  // Short label for mission node (first word of title, 6 chars max)
-  const shortLabel = (title: string) => {
-    const word = title.split(' ')[0]
-    return word.length > 6 ? word.slice(0, 5) + '\u2026' : word
-  }
-
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
       <div className="scroll-area" style={{ padding: '14px 14px 0' }}>
@@ -354,158 +356,105 @@ export function HomeScreen() {
           overflow: 'hidden',
           marginBottom: 14,
         }}>
-          {/* Header */}
-          <div style={{ padding: '16px 16px 0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.2px' }}>
-                Missoes do dia
+          {/* Header with progress bar */}
+          <div style={{ padding: '14px 16px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.2px' }}>
+                Missões do dia{' '}
+                <span style={{ fontWeight: 600, color: 'var(--text3)' }}>· {completedCount} de {todayMissions.length}</span>
               </div>
               {totalXp > 0 && (
                 <div style={{
-                  fontSize: 12, fontWeight: 700, color: 'var(--xp)',
-                  background: 'var(--xp-bg)', padding: '3px 9px', borderRadius: 20,
+                  fontSize: 11, fontWeight: 700, color: 'var(--xp)',
+                  background: 'var(--xp-bg)', padding: '2px 8px', borderRadius: 20,
                 }}>
                   +{totalXp} XP
                 </div>
               )}
             </div>
-            {/* Milestone track */}
-            {todayMissions.length > 0 && (
-              <div style={{ position: 'relative', padding: '0 8px 4px' }}>
-                <div style={{
-                  position: 'absolute', top: 17, left: 26, right: 26,
-                  height: 5, background: 'var(--bg3)', borderRadius: 3,
-                }} />
-                <div style={{
-                  position: 'absolute', top: 17, left: 26,
-                  width: `calc((100% - 52px) * ${progressPct / 100})`,
-                  height: 5,
-                  background: 'linear-gradient(90deg, #FF8F44, #FA1462)',
-                  borderRadius: 3,
-                  transition: 'width 0.5s ease',
-                }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
-                  {todayMissions.map((m) => {
-                    const isDone = m.completed
-                    const isCurrent = !isDone && todayMissions.slice(0, todayMissions.indexOf(m)).every(p => p.completed)
-                    return (
-                      <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                        <button
-                        onClick={() => openMission(m)}
-                        style={{
-                          width: 34, height: 34, borderRadius: '50%',
-                          cursor: (isDone || m.type === 'auto' || !m.isActive) ? 'default' : 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: isDone ? 'linear-gradient(135deg, #FF8F44, #FA1462)' : isCurrent ? 'var(--surface)' : 'var(--bg2)',
-                          border: isCurrent ? '2.5px solid var(--pink)' : isDone ? 'none' : '2px solid var(--border)',
-                          boxShadow: isDone ? '0 3px 10px rgba(250,20,98,0.28)' : 'none',
-                          transition: 'all 0.25s',
-                        } as React.CSSProperties} title={m.title}>
-                          {isDone ? (
-                            <svg viewBox="0 0 14 14" fill="none" width={13} height={13}>
-                              <path d="M2.5 7l3 3 6-5.5" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          ) : isCurrent ? (
-                            <div style={{
-                              width: 9, height: 9, borderRadius: '50%',
-                              background: 'var(--pink)',
-                              animation: 'mqPulse 1.5s ease-in-out infinite',
-                            }} />
-                          ) : null}
-                        </button>
-                        <span style={{ fontSize: 9, fontWeight: 700, color: isDone ? 'var(--pink)' : 'var(--text3)' }}>
-                          {shortLabel(m.title)}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Expanded list */}
-          <div style={{
-            maxHeight: missionsExpanded ? 500 : 0,
-            overflow: 'hidden',
-            transition: 'max-height 0.38s cubic-bezier(0.4,0,0.2,1)',
-          }}>
-            <div style={{ paddingTop: 10 }}>
-              {todayMissions.map((m, i) => {
-                const isPending = m.status === 'pending'
-                const canInteract = !m.completed && m.type !== 'auto' && m.isActive
-                return (
-                  <div key={m.id}>
-                    <div
-                      onClick={() => canInteract && openMission(m)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 12,
-                        padding: '11px 14px', background: 'var(--surface)',
-                        cursor: canInteract ? 'pointer' : 'default',
-                      }}
-                    >
-                      <div style={{
-                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: m.completed ? 'linear-gradient(135deg, #FF8F44, #FA1462)' : 'var(--bg2)',
-                        border: m.completed ? 'none' : '2px solid var(--border)',
-                      }}>
-                        {m.completed && (
-                          <svg viewBox="0 0 12 12" fill="none" width={11} height={11}>
-                            <path d="M2 6l2.5 2.5 5.5-5" stroke="white" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontSize: 13, fontWeight: 600,
-                          color: m.completed ? 'var(--text3)' : 'var(--text)',
-                          textDecoration: m.completed && !isPending ? 'line-through' : 'none',
-                          textDecorationColor: 'var(--bg3)',
-                        }}>{m.title}</div>
-                        <div style={{
-                          fontSize: 11, fontWeight: 600, marginTop: 1,
-                          color: isPending ? '#F59E0B' : m.completed ? 'var(--green)' : 'var(--text3)',
-                        }}>
-                          {isPending ? '⏳ Em análise' : m.completed ? 'Concluída' : canInteract ? 'Toque para completar' : 'Não iniciada'}
-                        </div>
-                      </div>
-                      <div style={{
-                        fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
-                        padding: '3px 8px', borderRadius: 6,
-                        background: m.completed ? 'rgba(26,153,96,0.08)' : 'var(--bg2)',
-                        border: `1px solid ${m.completed ? 'rgba(26,153,96,0.2)' : 'var(--border)'}`,
-                        color: m.completed ? 'var(--green)' : 'var(--text3)',
-                      }}>+{m.xpReward} XP</div>
-                    </div>
-                    {i < todayMissions.length - 1 && (
-                      <div style={{ height: 1, background: 'var(--border2)', margin: '0 14px' }} />
-                    )}
-                  </div>
-                )
-              })}
+            <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${progressPct}%`,
+                background: 'linear-gradient(90deg, #FF8F44, #FA1462)',
+                borderRadius: 3,
+                transition: 'width 0.5s ease',
+              }} />
             </div>
           </div>
 
-          {/* Toggle button */}
-          <button
-            onClick={() => setMissionsExpanded(v => !v)}
-            style={{
-              width: '100%', padding: '12px 16px', background: 'none', border: 'none',
-              borderTop: '1px solid var(--border2)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-              cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 700,
-              color: 'var(--text3)', transition: 'color 0.2s',
-            }}
-          >
-            <span>{missionsExpanded ? 'Fechar' : 'Ver todas'}</span>
-            <svg viewBox="0 0 12 8" fill="none" width={12} height={8} style={{
-              transition: 'transform 0.35s',
-              transform: missionsExpanded ? 'rotate(180deg)' : 'none',
-            }}>
-              <path d="M1 1l5 5 5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+          {/* Compact mission list */}
+          {todayMissions.map((m) => {
+            const isPending = m.status === 'pending'
+            const isLocked = m.isActive === false
+            const canTap = !isLocked && !(m.type === 'auto' && !m.completed)
+            const badge = MISSION_TYPE_BADGE[m.type ?? 'auto'] ?? MISSION_TYPE_BADGE.auto
+            return (
+              <div key={m.id}>
+                <div style={{ height: 1, background: 'var(--border2)' }} />
+                <div
+                  onClick={() => canTap && openMission(m)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 16px',
+                    cursor: canTap ? 'pointer' : 'default',
+                    opacity: isLocked ? 0.5 : 1,
+                  }}
+                >
+                  {/* Icon */}
+                  <div style={{ fontSize: 20, flexShrink: 0, width: 28, textAlign: 'center', lineHeight: 1 }}>
+                    {m.icon}
+                  </div>
+                  {/* Title + type badge */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: 600,
+                      color: m.completed && !isPending ? 'var(--text3)' : 'var(--text)',
+                      textDecoration: m.completed && !isPending ? 'line-through' : 'none',
+                      textDecorationColor: 'var(--bg3)',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      marginBottom: 2,
+                    }}>{m.title}</div>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700,
+                      color: badge.color, background: badge.bg,
+                      padding: '1px 6px', borderRadius: 4,
+                      display: 'inline-block',
+                    }}>{badge.label}</span>
+                  </div>
+                  {/* Status indicator */}
+                  <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                    {isLocked ? (
+                      <span style={{ fontSize: 15 }}>🔒</span>
+                    ) : m.completed && !isPending ? (
+                      <div style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #FF8F44, #FA1462)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <svg viewBox="0 0 12 12" fill="none" width={10} height={10}>
+                          <path d="M2 6l2.5 2.5 5.5-5" stroke="white" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    ) : isPending ? (
+                      <span style={{ fontSize: 15 }}>⏳</span>
+                    ) : m.type === 'auto' ? (
+                      <span style={{ fontSize: 13, color: 'var(--text3)' }}>⚡</span>
+                    ) : (
+                      <svg viewBox="0 0 8 12" fill="none" width={7} height={11}>
+                        <path d="M1.5 1.5l5 4.5-5 4.5" stroke="var(--text3)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+          {todayMissions.length === 0 && (
+            <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+              Nenhuma missão para hoje
+            </div>
+          )}
         </div>
 
         {/* LIVE CARD */}
@@ -1388,23 +1337,67 @@ export function HomeScreen() {
             </div>
 
             {/* Mission header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <div style={{
-                width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+                width: 52, height: 52, borderRadius: 16, flexShrink: 0,
                 background: 'rgba(250,20,98,0.1)', border: '1px solid rgba(250,20,98,0.2)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
               }}>{activeMission.icon}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{activeMission.title}</div>
-                <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>+{activeMission.xpReward} XP</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{activeMission.title}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {(() => {
+                    const b = MISSION_TYPE_BADGE[activeMission.type ?? 'auto'] ?? MISSION_TYPE_BADGE.auto
+                    return (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: b.color, background: b.bg, padding: '2px 7px', borderRadius: 4 }}>
+                        {b.label}
+                      </span>
+                    )
+                  })()}
+                  <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 600 }}>+{activeMission.xpReward} XP</span>
+                </div>
               </div>
             </div>
-            <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 20 }}>
+            <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>
               {activeMission.description}
             </p>
 
+            {/* Completed state */}
+            {activeMission.completed && (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                {activeMission.status === 'pending' || missionPending ? (
+                  <>
+                    <div style={{ fontSize: 40, marginBottom: 10 }}>⏳</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>Aguardando aprovação</div>
+                    <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 6, lineHeight: 1.5 }}>
+                      O admin irá revisar sua submissão e definir o vencedor.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--green)' }}>Missão concluída!</div>
+                    <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 6 }}>
+                      +{activeMission.xpReward} XP conquistados
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* TYPE: auto — completed automatically, show explanation if not done */}
+            {!activeMission.completed && activeMission.type === 'auto' && (
+              <div style={{
+                background: 'var(--bg2)', border: '1px solid var(--border)',
+                borderRadius: 12, padding: '14px 16px',
+                fontSize: 13, color: 'var(--text2)', lineHeight: 1.6,
+              }}>
+                ⚡ Esta missão é completada automaticamente quando você realiza a ação correspondente no app.
+              </div>
+            )}
+
             {/* TYPE: text */}
-            {activeMission.type === 'text' && (
+            {!activeMission.completed && activeMission.type === 'text' && (
               <>
                 <textarea
                   placeholder="Digite sua resposta..."
@@ -1440,7 +1433,7 @@ export function HomeScreen() {
             )}
 
             {/* TYPE: evidence */}
-            {activeMission.type === 'evidence' && (
+            {!activeMission.completed && activeMission.type === 'evidence' && (
               <>
                 <input
                   ref={missionFileInputRef}
@@ -1491,18 +1484,21 @@ export function HomeScreen() {
             )}
 
             {/* TYPE: admin */}
-            {activeMission.type === 'admin' && (
+            {!activeMission.completed && activeMission.type === 'admin' && (
               <>
                 {missionPending ? (
                   <div style={{ textAlign: 'center', padding: '24px 0' }}>
                     <div style={{ fontSize: 40, marginBottom: 10 }}>⏳</div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>Aguardando aprovação</div>
                     <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 6, lineHeight: 1.5 }}>
-                      O admin irá revisar sua submissão e definir o vencedor
+                      O admin irá revisar sua submissão e definir o vencedor.
                     </div>
                   </div>
                 ) : (
                   <>
+                    <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 14, lineHeight: 1.5 }}>
+                      Envie sua evidência. O admin vai avaliar e atribuir o XP ao vencedor. Participar já vale {activeMission.participationXp} XP.
+                    </div>
                     <input
                       ref={missionFileInputRef}
                       type="file"
@@ -1533,9 +1529,6 @@ export function HomeScreen() {
                         📎 Selecionar print do tempo de tela
                       </button>
                     )}
-                    <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12, lineHeight: 1.5 }}>
-                      Sua submissão ficará em análise até o admin definir o vencedor. Participar já vale {activeMission.participationXp} XP.
-                    </div>
                     <button
                       onClick={() => handleMissionEvidence(true)}
                       disabled={!missionFile || missionUploading}
@@ -1557,7 +1550,7 @@ export function HomeScreen() {
             )}
 
             {/* TYPE: checkin */}
-            {activeMission.type === 'checkin' && (
+            {!activeMission.completed && activeMission.type === 'checkin' && (
               <button
                 onClick={() => { completeMission(activeMission.id); closeMissionSheet() }}
                 style={{
@@ -1573,7 +1566,7 @@ export function HomeScreen() {
             )}
 
             {/* TYPE: quiz */}
-            {activeMission.type === 'quiz' && (() => {
+            {!activeMission.completed && activeMission.type === 'quiz' && (() => {
               const quiz = QUIZ_DATA[activeMission.key] ?? []
               const current = quiz[quizStep]
               if (!current) return null
