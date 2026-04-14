@@ -6,7 +6,7 @@ import type { Session } from '../store/appStore'
 const LIVE_TYPES: Session['type'][] = ['palestra', 'talkshow', 'louvor', 'especial']
 
 export function AdminScreen() {
-  const { navigateTo } = useAppStore()
+  const { navigateTo, showToast } = useAppStore()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState<string | null>(null)
@@ -14,6 +14,7 @@ export function AdminScreen() {
   // Pending missions
   const [pendingMissions, setPendingMissions] = useState<any[]>([])
   const [pendingLoading, setPendingLoading] = useState(true)
+  const [pendingError, setPendingError] = useState<string | null>(null)
   const [approvingId, setApprovingId] = useState<string | null>(null)
 
   // All missions (for is_active toggle)
@@ -29,10 +30,14 @@ export function AdminScreen() {
 
   async function loadPending() {
     setPendingLoading(true)
+    setPendingError(null)
     try {
       const data = await getAdminPendingMissions()
       setPendingMissions(data)
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[AdminScreen] loadPending error:', msg)
+      setPendingError(msg)
       setPendingMissions([])
     } finally {
       setPendingLoading(false)
@@ -112,9 +117,12 @@ export function AdminScreen() {
         mission.xp_reward,
         mission.participation_xp ?? 0
       )
+      showToast(`✅ Vencedor definido! +${mission.xp_reward} XP creditados`, 'success')
       await loadPending()
-    } catch {
-      // silently fail
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error('[AdminScreen] handleApprove error:', msg)
+      showToast('Erro ao aprovar: ' + msg, 'error')
     } finally {
       setApprovingId(null)
     }
@@ -273,6 +281,18 @@ export function AdminScreen() {
 
           {pendingLoading ? (
             <div style={{ textAlign: 'center', color: 'var(--text3)', padding: '20px 0', fontSize: 13 }}>Carregando…</div>
+          ) : pendingError ? (
+            <div style={{
+              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+              borderRadius: 14, padding: 14,
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>Erro ao carregar submissões</div>
+              <div style={{ fontSize: 12, color: '#ef4444', opacity: 0.8, wordBreak: 'break-all' }}>{pendingError}</div>
+              <button
+                onClick={loadPending}
+                style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: 'var(--pink)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >Tentar novamente</button>
+            </div>
           ) : pendingMissions.length === 0 ? (
             <div style={{
               background: 'var(--surface)', border: '1px solid var(--border)',

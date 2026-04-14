@@ -319,23 +319,40 @@ export async function submitMissionText(
 }
 
 export async function getAdminPendingMissions(): Promise<any[]> {
-  const { data, error } = await supabase
+  // 1. Fetch pending user_missions (avoid complex JOIN that can fail on FK name)
+  const { data: ums, error: umsError } = await supabase
     .from('user_missions')
-    .select(`
-      id,
-      user_id,
-      mission_id,
-      evidence_url,
-      response_text,
-      status,
-      missions!inner (title, xp_reward, participation_xp, icon),
-      profiles!user_missions_user_id_fkey (name)
-    `)
+    .select('id, user_id, mission_id, evidence_url, response_text, status')
     .eq('status', 'pending')
     .order('id')
+  if (umsError) throw umsError
+  if (!ums || ums.length === 0) return []
 
-  if (error) throw error
-  return data ?? []
+  // 2. Fetch mission details — only admin-type missions
+  const missionIds = [...new Set(ums.map((u: any) => u.mission_id))]
+  const { data: missions } = await supabase
+    .from('missions')
+    .select('id, title, xp_reward, participation_xp, icon, type')
+    .in('id', missionIds)
+    .eq('type', 'admin')
+  const missionMap = new Map((missions ?? []).map((m: any) => [m.id, m]))
+
+  // 3. Fetch profiles for the involved users
+  const userIds = [...new Set(ums.map((u: any) => u.user_id))]
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, name')
+    .in('id', userIds)
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]))
+
+  // 4. Merge — keep only entries whose mission is type='admin'
+  return ums
+    .filter((um: any) => missionMap.has(um.mission_id))
+    .map((um: any) => ({
+      ...um,
+      missions: missionMap.get(um.mission_id),
+      profiles: profileMap.get(um.user_id) ?? null,
+    }))
 }
 
 export async function approveAdminMission(
