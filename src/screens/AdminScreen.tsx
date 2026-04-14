@@ -118,6 +118,7 @@ export function AdminScreen() {
         mission.participation_xp ?? 0
       )
       showToast(`✅ Vencedor definido! +${mission.xp_reward} XP creditados`, 'success')
+      setPendingMissions(prev => prev.filter(s => s.mission_id !== submission.mission_id))
       await loadPending()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
