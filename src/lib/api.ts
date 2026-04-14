@@ -469,7 +469,78 @@ export async function getAchievements(userId: string): Promise<Achievement[]> {
     description: a.description,
     unlocked: unlockedMap.has(a.id),
     unlockedAt: unlockedMap.get(a.id),
+    conditionKey: a.condition_key ?? undefined,
+    conditionValue: a.condition_value ?? undefined,
   }))
+}
+
+// Verifica e desbloqueia conquistas automaticamente após completar uma missão
+export async function checkAndUnlockAchievements(userId: string): Promise<void> {
+  // Busca conquistas com condições definidas
+  const { data: achievements } = await supabase
+    .from('achievements')
+    .select('id, key, condition_key, condition_value')
+  if (!achievements || achievements.length === 0) return
+
+  // Busca missões completadas pelo usuário
+  const { data: userMissions } = await supabase
+    .from('user_missions')
+    .select('mission_id')
+    .eq('user_id', userId)
+    .eq('status', 'completed')
+  const completedIds = new Set((userMissions ?? []).map((um: any) => um.mission_id as string))
+  if (completedIds.size === 0) return
+
+  // Busca todas as missões para lookup por tipo/eixo/key
+  const { data: allMissions } = await supabase
+    .from('missions')
+    .select('id, type, eixo, key')
+  const missions = (allMissions ?? []) as { id: string; type: string; eixo: string | null; key: string | null }[]
+
+  for (const ach of achievements) {
+    const { condition_key, condition_value, key } = ach as { condition_key: string | null; condition_value: number | null; key: string }
+    if (!condition_key) continue
+
+    let shouldUnlock = false
+
+    switch (condition_key) {
+      case 'missions_count': {
+        shouldUnlock = completedIds.size >= (condition_value ?? 1)
+        break
+      }
+      case 'quizzes_complete': {
+        const quizzes = missions.filter(m => m.type === 'quiz')
+        shouldUnlock = quizzes.length > 0 && quizzes.every(m => completedIds.has(m.id))
+        break
+      }
+      case 'checkins_complete': {
+        const done = missions.filter(m => m.type === 'checkin' && completedIds.has(m.id))
+        shouldUnlock = done.length >= 2
+        break
+      }
+      case 'eixo_dopamina_complete': {
+        const dopamina = missions.filter(m => m.eixo === 'dopamina')
+        shouldUnlock = dopamina.length > 0 && dopamina.every(m => completedIds.has(m.id))
+        break
+      }
+      case 'won_screen_time': {
+        const screenTime = missions.filter(m => m.type === 'admin' && m.key?.includes('menor_tela'))
+        shouldUnlock = screenTime.some(m => completedIds.has(m.id))
+        break
+      }
+      case 'questions_count': {
+        const questions = missions.filter(m => m.key === 'pergunta_palestra')
+        const count = questions.filter(m => completedIds.has(m.id)).length
+        shouldUnlock = count >= (condition_value ?? 1)
+        break
+      }
+      // connections_count, states_count, top3_ranking: dependem de texto livre, não verificados aqui
+    }
+
+    if (shouldUnlock) {
+      await checkAchievement(userId, key)
+    }
+  }
 }
 
 // Check and unlock an achievement by key for a given user (no auth.uid() dependency)
