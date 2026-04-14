@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { uploadPostImage } from '../lib/api'
+import { uploadPostImage, submitMissionEvidence, submitMissionText } from '../lib/api'
 import { useAppStore } from '../store/appStore'
+import type { Mission } from '../store/appStore'
 
 type FeedTab = 'comments' | 'prayer' | 'announcements'
 type SheetType = 'none' | 'pick' | 'comment' | 'live-question' | 'prayer' | 'announcement' | 'replies' | 'menu'
@@ -23,7 +24,7 @@ export function HomeScreen() {
   const {
     missions, feed, authUserId, user, eventConfig, liveSession, toggleLike, addReaction, addPost,
     submitLiveQuestion, addSheetOpen, setAddSheetOpen, completeMissionByKey, openLiveQuestion,
-    setOpenLiveQuestion, refreshLiveSession,
+    setOpenLiveQuestion, refreshLiveSession, completeMission, showToast,
     deletePost,
     pinPost,
   } = useAppStore()
@@ -50,6 +51,18 @@ export function HomeScreen() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null)
   const [menuPostId, setMenuPostId] = useState<string | null>(null)
+
+  // Mission interaction
+  const [activeMission, setActiveMission] = useState<Mission | null>(null)
+  const [missionText, setMissionText] = useState('')
+  const [missionFile, setMissionFile] = useState<File | null>(null)
+  const [missionFilePreview, setMissionFilePreview] = useState<string | null>(null)
+  const [missionUploading, setMissionUploading] = useState(false)
+  const [missionPending, setMissionPending] = useState(false)
+  const [quizStep, setQuizStep] = useState(0)
+  const [quizAnswers, setQuizAnswers] = useState<number[]>([])
+  const [quizSubmitted, setQuizSubmitted] = useState(false)
+  const missionFileInputRef = useRef<HTMLInputElement>(null)
 
   const isAdmin = user.role === 'admin'
 
@@ -87,7 +100,7 @@ export function HomeScreen() {
     return diff + 1
   }, [eventConfig])
 
-  const todayMissions = missions.filter(m => m.day === currentEventDay)
+  const todayMissions = missions.filter(m => m.day === currentEventDay || m.day === null)
   const completedCount = todayMissions.filter(m => m.completed).length
   const totalXp = todayMissions.reduce((sum, m) => sum + m.xpReward, 0)
   const progressPct = todayMissions.length > 0 ? (completedCount / todayMissions.length) * 100 : 0
@@ -181,6 +194,135 @@ export function HomeScreen() {
     setMenuPostId(null)
   }
 
+  // Mission interaction helpers
+  const QUIZ_DATA: Record<string, { question: string; options: string[]; correct: number }[]> = {
+    quiz_saturados: [
+      {
+        question: 'Segundo a palestra, o que significa estar saturado?',
+        options: ['Cheio de informação verdadeira', 'Preso no ciclo de recompensas imediatas', 'Com sono'],
+        correct: 1,
+      },
+      {
+        question: 'O que Efésios 5:19 chama a fazer?',
+        options: ['Evitar entretenimento', 'Ser enchido do Espírito Santo', 'Jejuar das redes'],
+        correct: 1,
+      },
+      {
+        question: 'Dois corpos não ocupam o mesmo lugar: isso ilustra o quê?',
+        options: ['Física quântica', 'Para ser cheio do Espírito, devemos nos esvaziar do mundo', 'Que não dá para usar dois apps ao mesmo tempo'],
+        correct: 1,
+      },
+    ],
+    quiz_sentido: [
+      {
+        question: 'Qual é o desígnio de Deus para o trabalho?',
+        options: ['Acumular experiências', 'Exige serviço, raramente gera likes', 'Trabalhar 40h'],
+        correct: 1,
+      },
+      {
+        question: 'O que Colossenses 3:23 diz?',
+        options: ['Trabalhe 40h', 'Faça tudo de todo o coração, como para o Senhor', 'Busque realização'],
+        correct: 1,
+      },
+      {
+        question: 'Ao entender que servimos "como para o Senhor", o que acontece?',
+        options: ['Ganha mais dinheiro', 'O tédio é substituído pela glória de quem nos chama', 'O trabalho fica mais fácil'],
+        correct: 1,
+      },
+    ],
+  }
+
+  function openMission(m: Mission) {
+    if (m.completed || m.type === 'auto') return
+    if (!m.isActive) return
+    setActiveMission(m)
+    setMissionText('')
+    setMissionFile(null)
+    setMissionFilePreview(null)
+    setMissionPending(false)
+    setQuizStep(0)
+    setQuizAnswers([])
+    setQuizSubmitted(false)
+  }
+
+  function closeMissionSheet() {
+    setActiveMission(null)
+    setMissionText('')
+    setMissionFile(null)
+    setMissionFilePreview(null)
+    setMissionPending(false)
+    setQuizStep(0)
+    setQuizAnswers([])
+    setQuizSubmitted(false)
+  }
+
+  async function handleMissionText() {
+    if (!activeMission || !authUserId || !missionText.trim()) return
+    setMissionUploading(true)
+    try {
+      await submitMissionText(authUserId, activeMission.id, missionText, activeMission.xpReward)
+      completeMission(activeMission.id)
+      closeMissionSheet()
+    } catch {
+      showToast('Erro ao salvar. Tente novamente.', 'error')
+    } finally {
+      setMissionUploading(false)
+    }
+  }
+
+  async function handleMissionEvidence(isAdmin: boolean) {
+    if (!activeMission || !authUserId || !missionFile) return
+    setMissionUploading(true)
+    try {
+      await submitMissionEvidence(authUserId, activeMission.id, missionFile, activeMission.xpReward, isAdmin)
+      if (isAdmin) {
+        setMissionPending(true)
+        // Mark completed locally (status=pending) without crediting XP
+        useAppStore.setState(s => ({
+          missions: s.missions.map(m => m.id === activeMission.id ? { ...m, completed: true, status: 'pending' } : m),
+        }))
+      } else {
+        completeMission(activeMission.id)
+        closeMissionSheet()
+      }
+    } catch {
+      showToast('Erro ao enviar. Tente novamente.', 'error')
+    } finally {
+      setMissionUploading(false)
+    }
+  }
+
+  function handleMissionFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setMissionFile(file)
+    setMissionFilePreview(URL.createObjectURL(file))
+  }
+
+  function handleQuizAnswer(optionIdx: number) {
+    const newAnswers = [...quizAnswers]
+    newAnswers[quizStep] = optionIdx
+    setQuizAnswers(newAnswers)
+  }
+
+  function handleQuizNext() {
+    if (!activeMission) return
+    const quiz = QUIZ_DATA[activeMission.key] ?? []
+    if (quizStep < quiz.length - 1) {
+      setQuizStep(s => s + 1)
+    } else {
+      // Submit
+      setQuizSubmitted(true)
+      const allCorrect = quiz.every((q, i) => quizAnswers[i] === q.correct)
+      if (allCorrect) {
+        setTimeout(() => {
+          completeMission(activeMission.id)
+          closeMissionSheet()
+        }, 1200)
+      }
+    }
+  }
+
   const filteredFeed = feed.filter(p => {
     if (feedTab === 'comments') return p.type === 'comment'
     if (feedTab === 'prayer') return p.type === 'prayer'
@@ -248,8 +390,11 @@ export function HomeScreen() {
                     const isCurrent = !isDone && todayMissions.slice(0, todayMissions.indexOf(m)).every(p => p.completed)
                     return (
                       <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                        <button style={{
-                          width: 34, height: 34, borderRadius: '50%', cursor: 'default',
+                        <button
+                        onClick={() => openMission(m)}
+                        style={{
+                          width: 34, height: 34, borderRadius: '50%',
+                          cursor: (isDone || m.type === 'auto' || !m.isActive) ? 'default' : 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           background: isDone ? 'linear-gradient(135deg, #FF8F44, #FA1462)' : isCurrent ? 'var(--surface)' : 'var(--bg2)',
                           border: isCurrent ? '2.5px solid var(--pink)' : isDone ? 'none' : '2px solid var(--border)',
@@ -286,51 +431,59 @@ export function HomeScreen() {
             transition: 'max-height 0.38s cubic-bezier(0.4,0,0.2,1)',
           }}>
             <div style={{ paddingTop: 10 }}>
-              {todayMissions.map((m, i) => (
-                <div key={m.id}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '11px 14px', background: 'var(--surface)', cursor: 'default',
-                  }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: m.completed ? 'linear-gradient(135deg, #FF8F44, #FA1462)' : 'var(--bg2)',
-                      border: m.completed ? 'none' : '2px solid var(--border)',
-                    }}>
-                      {m.completed && (
-                        <svg viewBox="0 0 12 12" fill="none" width={11} height={11}>
-                          <path d="M2 6l2.5 2.5 5.5-5" stroke="white" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+              {todayMissions.map((m, i) => {
+                const isPending = m.status === 'pending'
+                const canInteract = !m.completed && m.type !== 'auto' && m.isActive
+                return (
+                  <div key={m.id}>
+                    <div
+                      onClick={() => canInteract && openMission(m)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '11px 14px', background: 'var(--surface)',
+                        cursor: canInteract ? 'pointer' : 'default',
+                      }}
+                    >
                       <div style={{
-                        fontSize: 13, fontWeight: 600,
-                        color: m.completed ? 'var(--text3)' : 'var(--text)',
-                        textDecoration: m.completed ? 'line-through' : 'none',
-                        textDecorationColor: 'var(--bg3)',
-                      }}>{m.title}</div>
-                      <div style={{
-                        fontSize: 11, fontWeight: 600, marginTop: 1,
-                        color: m.completed ? 'var(--green)' : 'var(--text3)',
+                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: m.completed ? 'linear-gradient(135deg, #FF8F44, #FA1462)' : 'var(--bg2)',
+                        border: m.completed ? 'none' : '2px solid var(--border)',
                       }}>
-                        {m.completed ? 'Concluida' : 'Nao iniciada'}
+                        {m.completed && (
+                          <svg viewBox="0 0 12 12" fill="none" width={11} height={11}>
+                            <path d="M2 6l2.5 2.5 5.5-5" stroke="white" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
                       </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: 13, fontWeight: 600,
+                          color: m.completed ? 'var(--text3)' : 'var(--text)',
+                          textDecoration: m.completed && !isPending ? 'line-through' : 'none',
+                          textDecorationColor: 'var(--bg3)',
+                        }}>{m.title}</div>
+                        <div style={{
+                          fontSize: 11, fontWeight: 600, marginTop: 1,
+                          color: isPending ? '#F59E0B' : m.completed ? 'var(--green)' : 'var(--text3)',
+                        }}>
+                          {isPending ? '⏳ Em análise' : m.completed ? 'Concluída' : canInteract ? 'Toque para completar' : 'Não iniciada'}
+                        </div>
+                      </div>
+                      <div style={{
+                        fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
+                        padding: '3px 8px', borderRadius: 6,
+                        background: m.completed ? 'rgba(26,153,96,0.08)' : 'var(--bg2)',
+                        border: `1px solid ${m.completed ? 'rgba(26,153,96,0.2)' : 'var(--border)'}`,
+                        color: m.completed ? 'var(--green)' : 'var(--text3)',
+                      }}>+{m.xpReward} XP</div>
                     </div>
-                    <div style={{
-                      fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap',
-                      padding: '3px 8px', borderRadius: 6,
-                      background: m.completed ? 'rgba(26,153,96,0.08)' : 'var(--bg2)',
-                      border: `1px solid ${m.completed ? 'rgba(26,153,96,0.2)' : 'var(--border)'}`,
-                      color: m.completed ? 'var(--green)' : 'var(--text3)',
-                    }}>+{m.xpReward} XP</div>
+                    {i < todayMissions.length - 1 && (
+                      <div style={{ height: 1, background: 'var(--border2)', margin: '0 14px' }} />
+                    )}
                   </div>
-                  {i < todayMissions.length - 1 && (
-                    <div style={{ height: 1, background: 'var(--border2)', margin: '0 14px' }} />
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
@@ -1211,6 +1364,297 @@ export function HomeScreen() {
             </div>
           )}
         </div>
+      )}
+
+      {/* MISSION INTERACTION SHEET */}
+      {activeMission && (
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 97, backdropFilter: 'blur(3px)' }}
+            className="fade-in"
+            onClick={closeMissionSheet}
+          />
+          <div
+            className="sheet-up"
+            style={{
+              position: 'fixed', bottom: 0, left: 0, right: 0,
+              background: 'var(--surface)', borderRadius: '24px 24px 0 0',
+              zIndex: 98, padding: '0 20px 48px', maxHeight: '90vh', overflowY: 'auto',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 0' }}>
+              <div style={{ width: 36, height: 4, background: 'var(--bg3)', borderRadius: 2 }} />
+            </div>
+
+            {/* Mission header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+                background: 'rgba(250,20,98,0.1)', border: '1px solid rgba(250,20,98,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+              }}>{activeMission.icon}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{activeMission.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>+{activeMission.xpReward} XP</div>
+              </div>
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 20 }}>
+              {activeMission.description}
+            </p>
+
+            {/* TYPE: text */}
+            {activeMission.type === 'text' && (
+              <>
+                <textarea
+                  placeholder="Digite sua resposta..."
+                  value={missionText}
+                  onChange={e => setMissionText(e.target.value)}
+                  rows={4}
+                  autoFocus
+                  style={{
+                    width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)',
+                    borderRadius: 12, padding: '13px 15px', color: 'var(--text)', fontSize: 14,
+                    outline: 'none', resize: 'none', marginBottom: 14, fontFamily: 'var(--font-body)',
+                    boxSizing: 'border-box',
+                  }}
+                  onFocus={e => e.target.style.borderColor = 'var(--pink)'}
+                  onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                />
+                <button
+                  onClick={handleMissionText}
+                  disabled={!missionText.trim() || missionUploading}
+                  style={{
+                    width: '100%', padding: 14,
+                    background: missionText.trim() && !missionUploading ? 'var(--grad-warm)' : 'var(--bg3)',
+                    border: 'none', borderRadius: 12,
+                    color: missionText.trim() && !missionUploading ? '#fff' : 'var(--text3)',
+                    fontSize: 14, fontWeight: 700,
+                    cursor: missionText.trim() && !missionUploading ? 'pointer' : 'not-allowed',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  {missionUploading ? 'Salvando...' : `Completar (+${activeMission.xpReward} XP)`}
+                </button>
+              </>
+            )}
+
+            {/* TYPE: evidence */}
+            {activeMission.type === 'evidence' && (
+              <>
+                <input
+                  ref={missionFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleMissionFileChange}
+                />
+                {missionFilePreview ? (
+                  <div style={{ marginBottom: 14 }}>
+                    <img src={missionFilePreview} alt="" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 12 }} />
+                    <button
+                      onClick={() => { setMissionFile(null); setMissionFilePreview(null) }}
+                      style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                    >
+                      Trocar imagem
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => missionFileInputRef.current?.click()}
+                    style={{
+                      width: '100%', padding: '18px 0', marginBottom: 14,
+                      background: 'var(--bg2)', border: '2px dashed var(--border)',
+                      borderRadius: 12, color: 'var(--text3)', fontSize: 14, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    📎 Selecionar print / foto
+                  </button>
+                )}
+                <button
+                  onClick={() => handleMissionEvidence(false)}
+                  disabled={!missionFile || missionUploading}
+                  style={{
+                    width: '100%', padding: 14,
+                    background: missionFile && !missionUploading ? 'var(--grad-warm)' : 'var(--bg3)',
+                    border: 'none', borderRadius: 12,
+                    color: missionFile && !missionUploading ? '#fff' : 'var(--text3)',
+                    fontSize: 14, fontWeight: 700,
+                    cursor: missionFile && !missionUploading ? 'pointer' : 'not-allowed',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  {missionUploading ? 'Enviando...' : `Enviar e ganhar +${activeMission.xpReward} XP`}
+                </button>
+              </>
+            )}
+
+            {/* TYPE: admin */}
+            {activeMission.type === 'admin' && (
+              <>
+                {missionPending ? (
+                  <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                    <div style={{ fontSize: 40, marginBottom: 10 }}>⏳</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>Aguardando aprovação</div>
+                    <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 6, lineHeight: 1.5 }}>
+                      O admin irá revisar sua submissão e definir o vencedor
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      ref={missionFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleMissionFileChange}
+                    />
+                    {missionFilePreview ? (
+                      <div style={{ marginBottom: 14 }}>
+                        <img src={missionFilePreview} alt="" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 12 }} />
+                        <button
+                          onClick={() => { setMissionFile(null); setMissionFilePreview(null) }}
+                          style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--text3)', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                        >
+                          Trocar imagem
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => missionFileInputRef.current?.click()}
+                        style={{
+                          width: '100%', padding: '18px 0', marginBottom: 14,
+                          background: 'var(--bg2)', border: '2px dashed var(--border)',
+                          borderRadius: 12, color: 'var(--text3)', fontSize: 14, fontWeight: 600,
+                          cursor: 'pointer', fontFamily: 'var(--font-body)',
+                        }}
+                      >
+                        📎 Selecionar print do tempo de tela
+                      </button>
+                    )}
+                    <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12, lineHeight: 1.5 }}>
+                      Sua submissão ficará em análise até o admin definir o vencedor. Participar já vale {activeMission.participationXp} XP.
+                    </div>
+                    <button
+                      onClick={() => handleMissionEvidence(true)}
+                      disabled={!missionFile || missionUploading}
+                      style={{
+                        width: '100%', padding: 14,
+                        background: missionFile && !missionUploading ? 'var(--grad-warm)' : 'var(--bg3)',
+                        border: 'none', borderRadius: 12,
+                        color: missionFile && !missionUploading ? '#fff' : 'var(--text3)',
+                        fontSize: 14, fontWeight: 700,
+                        cursor: missionFile && !missionUploading ? 'pointer' : 'not-allowed',
+                        fontFamily: 'var(--font-body)',
+                      }}
+                    >
+                      {missionUploading ? 'Enviando...' : 'Enviar para análise'}
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* TYPE: checkin */}
+            {activeMission.type === 'checkin' && (
+              <button
+                onClick={() => { completeMission(activeMission.id); closeMissionSheet() }}
+                style={{
+                  width: '100%', padding: 16,
+                  background: 'var(--grad-warm)', border: 'none', borderRadius: 12,
+                  color: '#fff', fontSize: 15, fontWeight: 800,
+                  cursor: 'pointer', fontFamily: 'var(--font-body)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                ✅ Fazer check-in agora (+{activeMission.xpReward} XP)
+              </button>
+            )}
+
+            {/* TYPE: quiz */}
+            {activeMission.type === 'quiz' && (() => {
+              const quiz = QUIZ_DATA[activeMission.key] ?? []
+              const current = quiz[quizStep]
+              if (!current) return null
+              const allCorrect = quiz.every((q, i) => quizAnswers[i] === q.correct)
+              if (quizSubmitted) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <div style={{ fontSize: 48, marginBottom: 12 }}>{allCorrect ? '🎉' : '😅'}</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>
+                      {allCorrect ? 'Parabéns! Você acertou tudo!' : 'Quase lá...'}
+                    </div>
+                    <div style={{ fontSize: 14, color: 'var(--text3)', lineHeight: 1.5 }}>
+                      {allCorrect
+                        ? `+${activeMission.xpReward} XP creditados!`
+                        : 'Você errou pelo menos uma resposta. Tente novamente!'}
+                    </div>
+                    {!allCorrect && (
+                      <button
+                        onClick={() => { setQuizStep(0); setQuizAnswers([]); setQuizSubmitted(false) }}
+                        style={{
+                          marginTop: 16, padding: '12px 28px',
+                          background: 'var(--grad-warm)', border: 'none', borderRadius: 12,
+                          color: '#fff', fontSize: 14, fontWeight: 700,
+                          cursor: 'pointer', fontFamily: 'var(--font-body)',
+                        }}
+                      >
+                        Tentar novamente
+                      </button>
+                    )}
+                  </div>
+                )
+              }
+              return (
+                <>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>
+                    Pergunta {quizStep + 1} de {quiz.length}
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 16, lineHeight: 1.5 }}>
+                    {current.question}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                    {current.options.map((opt, idx) => {
+                      const selected = quizAnswers[quizStep] === idx
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => handleQuizAnswer(idx)}
+                          style={{
+                            padding: '13px 16px', textAlign: 'left',
+                            background: selected ? 'rgba(250,20,98,0.1)' : 'var(--bg2)',
+                            border: `1.5px solid ${selected ? 'var(--pink)' : 'var(--border)'}`,
+                            borderRadius: 12, fontSize: 14, color: selected ? 'var(--pink)' : 'var(--text)',
+                            fontWeight: selected ? 700 : 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          {opt}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button
+                    onClick={handleQuizNext}
+                    disabled={quizAnswers[quizStep] === undefined}
+                    style={{
+                      width: '100%', padding: 14,
+                      background: quizAnswers[quizStep] !== undefined ? 'var(--grad-warm)' : 'var(--bg3)',
+                      border: 'none', borderRadius: 12,
+                      color: quizAnswers[quizStep] !== undefined ? '#fff' : 'var(--text3)',
+                      fontSize: 14, fontWeight: 700,
+                      cursor: quizAnswers[quizStep] !== undefined ? 'pointer' : 'not-allowed',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    {quizStep < quiz.length - 1 ? 'Próxima →' : 'Finalizar quiz'}
+                  </button>
+                </>
+              )
+            })()}
+          </div>
+        </>
       )}
     </div>
   )

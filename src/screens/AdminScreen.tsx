@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../store/appStore'
-import { getSessions, setSessionLive, clearAllLive } from '../lib/api'
+import { getSessions, setSessionLive, clearAllLive, getAdminPendingMissions, approveAdminMission } from '../lib/api'
 import type { Session } from '../store/appStore'
 
 const LIVE_TYPES: Session['type'][] = ['palestra', 'talkshow', 'louvor', 'especial']
@@ -11,14 +11,32 @@ export function AdminScreen() {
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState<string | null>(null)
 
+  // Pending missions
+  const [pendingMissions, setPendingMissions] = useState<any[]>([])
+  const [pendingLoading, setPendingLoading] = useState(true)
+  const [approvingId, setApprovingId] = useState<string | null>(null)
+
   async function load() {
     const data = await getSessions()
     setSessions(data)
     setLoading(false)
   }
 
+  async function loadPending() {
+    setPendingLoading(true)
+    try {
+      const data = await getAdminPendingMissions()
+      setPendingMissions(data)
+    } catch {
+      setPendingMissions([])
+    } finally {
+      setPendingLoading(false)
+    }
+  }
+
   useEffect(() => {
     load()
+    loadPending()
     const interval = setInterval(load, 10000)
     return () => clearInterval(interval)
   }, [])
@@ -50,6 +68,25 @@ export function AdminScreen() {
       await load()
     } finally {
       setActing(null)
+    }
+  }
+
+  async function handleApprove(submission: any) {
+    setApprovingId(submission.id)
+    try {
+      const mission = submission.missions
+      await approveAdminMission(
+        submission.id,
+        submission.mission_id,
+        submission.user_id,
+        mission.xp_reward,
+        mission.participation_xp ?? 0
+      )
+      await loadPending()
+    } catch {
+      // silently fail
+    } finally {
+      setApprovingId(null)
     }
   }
 
@@ -186,6 +223,108 @@ export function AdminScreen() {
             )
           })
         )}
+
+        {/* PENDING MISSIONS SECTION */}
+        <div style={{ marginTop: 24 }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700, letterSpacing: '1.2px',
+            textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span>Missões para aprovar</span>
+            {pendingMissions.length > 0 && (
+              <span style={{
+                background: 'var(--pink)', color: '#fff',
+                fontSize: 10, fontWeight: 800, padding: '2px 7px',
+                borderRadius: 20,
+              }}>{pendingMissions.length}</span>
+            )}
+          </div>
+
+          {pendingLoading ? (
+            <div style={{ textAlign: 'center', color: 'var(--text3)', padding: '20px 0', fontSize: 13 }}>Carregando…</div>
+          ) : pendingMissions.length === 0 ? (
+            <div style={{
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 14, padding: 16, textAlign: 'center',
+              color: 'var(--text3)', fontSize: 13,
+            }}>
+              Nenhuma submissão pendente ✓
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {pendingMissions.map((sub: any) => {
+                const mission = sub.missions
+                const profile = sub.profiles
+                const isApproving = approvingId === sub.id
+                return (
+                  <div
+                    key={sub.id}
+                    style={{
+                      background: 'var(--surface)', border: '1px solid var(--border)',
+                      borderRadius: 14, padding: 14, boxShadow: 'var(--shadow-sm)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                      <div style={{ fontSize: 22 }}>{mission?.icon ?? '📋'}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                          {mission?.title ?? 'Missão'}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 1 }}>
+                          {profile?.name ?? 'Participante'} · +{mission?.xp_reward ?? 0} XP
+                        </div>
+                      </div>
+                      <div style={{
+                        fontSize: 10, fontWeight: 700, color: '#F59E0B',
+                        background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)',
+                        borderRadius: 6, padding: '2px 7px',
+                      }}>
+                        ⏳ Pendente
+                      </div>
+                    </div>
+
+                    {sub.evidence_url && (
+                      <img
+                        src={sub.evidence_url}
+                        alt="evidência"
+                        style={{
+                          width: '100%', maxHeight: 180, objectFit: 'cover',
+                          borderRadius: 10, marginBottom: 10,
+                        }}
+                      />
+                    )}
+
+                    {sub.response_text && (
+                      <div style={{
+                        background: 'var(--bg2)', borderRadius: 8, padding: '10px 12px',
+                        fontSize: 13, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 10,
+                      }}>
+                        {sub.response_text}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => handleApprove(sub)}
+                      disabled={isApproving}
+                      style={{
+                        width: '100%', padding: '10px 0',
+                        background: isApproving ? 'var(--bg3)' : 'rgba(250,20,98,0.1)',
+                        border: '1.5px solid rgba(250,20,98,0.35)',
+                        borderRadius: 10, color: isApproving ? 'var(--text3)' : 'var(--pink)',
+                        fontSize: 13, fontWeight: 700,
+                        cursor: isApproving ? 'not-allowed' : 'pointer',
+                        fontFamily: 'var(--font-body)',
+                      }}
+                    >
+                      {isApproving ? '…' : '👑 Definir como vencedor'}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

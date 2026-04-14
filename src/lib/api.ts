@@ -240,24 +240,136 @@ export async function getLiveSessionManual(): Promise<Session | null> {
 // ─── MISSIONS ─────────────────────────────────────────────────────────────────
 
 export async function getMissionsWithStatus(userId: string): Promise<Mission[]> {
-  const [missionsRes, completedRes] = await Promise.all([
-    supabase.from('missions').select('*').order('day').order('order_index'),
-    supabase.from('user_missions').select('mission_id').eq('user_id', userId),
+  const [missionsRes, userMissionsRes] = await Promise.all([
+    supabase.from('missions').select('*').order('day', { nullsFirst: false }).order('order_index'),
+    supabase.from('user_missions').select('mission_id, status').eq('user_id', userId),
   ])
 
   const missions = missionsRes.data ?? []
-  const completedIds = new Set((completedRes.data ?? []).map(um => um.mission_id))
+  const userMissionsMap = new Map(
+    (userMissionsRes.data ?? []).map(um => [um.mission_id, um.status as string])
+  )
 
-  return missions.map(m => ({
-    id: m.id,
-    key: m.key ?? '',
-    title: m.title,
-    description: m.description ?? '',
-    xpReward: m.xp_reward,
-    icon: m.icon,
-    day: m.day,
-    completed: completedIds.has(m.id),
-  }))
+  return missions.map(m => {
+    const umStatus = userMissionsMap.get(m.id)
+    return {
+      id: m.id,
+      key: m.key ?? '',
+      title: m.title,
+      description: m.description ?? '',
+      xpReward: m.xp_reward,
+      icon: m.icon,
+      day: m.day ?? null,
+      completed: !!umStatus,
+      type: (m.type ?? 'auto') as Mission['type'],
+      eixo: m.eixo ?? 'geral',
+      participationXp: m.participation_xp ?? 0,
+      isActive: m.is_active ?? true,
+      status: (umStatus ?? undefined) as Mission['status'],
+    }
+  })
+}
+
+export async function submitMissionEvidence(
+  userId: string,
+  missionId: string,
+  file: File,
+  xpReward: number,
+  isAdmin: boolean
+): Promise<void> {
+  const ext = file.name.split('.').pop()
+  const path = `${userId}/${missionId}.${ext}`
+  const { error: uploadError } = await supabase.storage
+    .from('mission-evidence')
+    .upload(path, file, { upsert: true })
+  if (uploadError) throw uploadError
+
+  const { data } = supabase.storage.from('mission-evidence').getPublicUrl(path)
+  const status = isAdmin ? 'pending' : 'completed'
+
+  const { error } = await supabase
+    .from('user_missions')
+    .upsert(
+      { user_id: userId, mission_id: missionId, evidence_url: data.publicUrl, status },
+      { onConflict: 'user_id,mission_id' }
+    )
+  if (error) throw error
+
+  if (!isAdmin) {
+    await addXp(userId, xpReward)
+  }
+}
+
+export async function submitMissionText(
+  userId: string,
+  missionId: string,
+  text: string,
+  xpReward: number
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_missions')
+    .upsert(
+      { user_id: userId, mission_id: missionId, response_text: text, status: 'completed' },
+      { onConflict: 'user_id,mission_id' }
+    )
+  if (error) throw error
+  await addXp(userId, xpReward)
+}
+
+export async function getAdminPendingMissions(): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('user_missions')
+    .select(`
+      id,
+      user_id,
+      mission_id,
+      evidence_url,
+      response_text,
+      status,
+      missions!inner (title, xp_reward, participation_xp, icon),
+      profiles!user_missions_user_id_fkey (name)
+    `)
+    .eq('status', 'pending')
+    .order('id')
+
+  if (error) throw error
+  return data ?? []
+}
+
+export async function approveAdminMission(
+  winnerUserMissionId: string,
+  missionId: string,
+  winnerUserId: string,
+  winnerXp: number,
+  participationXp: number
+): Promise<void> {
+  // Mark winner as completed and credit full XP
+  const { error: winnerError } = await supabase
+    .from('user_missions')
+    .update({ status: 'completed' })
+    .eq('id', winnerUserMissionId)
+  if (winnerError) throw winnerError
+  await addXp(winnerUserId, winnerXp)
+
+  // Get all other pending submissions for this mission
+  const { data: others } = await supabase
+    .from('user_missions')
+    .select('id, user_id')
+    .eq('mission_id', missionId)
+    .eq('status', 'pending')
+    .neq('id', winnerUserMissionId)
+
+  if (others && others.length > 0) {
+    const ids = others.map(o => o.id)
+    await supabase
+      .from('user_missions')
+      .update({ status: 'completed' })
+      .in('id', ids)
+
+    if (participationXp > 0) {
+      await Promise.all(others.map(o => addXp(o.user_id, participationXp)))
+    }
+  }
 }
 
 export async function completeMission(userId: string, missionId: string, xpReward: number) {

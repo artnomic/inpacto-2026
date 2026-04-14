@@ -64,7 +64,12 @@ export interface Mission {
   xpReward: number
   icon: string
   completed: boolean
-  day: number
+  day: number | null
+  type?: 'auto' | 'text' | 'evidence' | 'quiz' | 'admin' | 'checkin'
+  eixo?: string
+  participationXp?: number
+  isActive?: boolean
+  status?: 'completed' | 'pending'
 }
 
 export interface FeedPost {
