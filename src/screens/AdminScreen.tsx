@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../store/appStore'
-import { getSessions, setSessionLive, clearAllLive, getAdminPendingMissions, approveAdminMission } from '../lib/api'
+import { getSessions, setSessionLive, clearAllLive, getAdminPendingMissions, approveAdminMission, getAllMissions, toggleMissionActive } from '../lib/api'
 import type { Session } from '../store/appStore'
 
 const LIVE_TYPES: Session['type'][] = ['palestra', 'talkshow', 'louvor', 'especial']
@@ -15,6 +15,11 @@ export function AdminScreen() {
   const [pendingMissions, setPendingMissions] = useState<any[]>([])
   const [pendingLoading, setPendingLoading] = useState(true)
   const [approvingId, setApprovingId] = useState<string | null>(null)
+
+  // All missions (for is_active toggle)
+  type MissionRow = { id: string; title: string; icon: string; day: number | null; isActive: boolean; type: string }
+  const [allMissions, setAllMissions] = useState<MissionRow[]>([])
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   async function load() {
     const data = await getSessions()
@@ -34,9 +39,19 @@ export function AdminScreen() {
     }
   }
 
+  async function loadAllMissions() {
+    try {
+      const data = await getAllMissions()
+      setAllMissions(data)
+    } catch {
+      // silently fail
+    }
+  }
+
   useEffect(() => {
     load()
     loadPending()
+    loadAllMissions()
     const interval = setInterval(load, 10000)
     return () => clearInterval(interval)
   }, [])
@@ -68,6 +83,21 @@ export function AdminScreen() {
       await load()
     } finally {
       setActing(null)
+    }
+  }
+
+  async function handleToggleMission(mission: { id: string; isActive: boolean }) {
+    setTogglingId(mission.id)
+    const newValue = !mission.isActive
+    // Optimistic update
+    setAllMissions(prev => prev.map(m => m.id === mission.id ? { ...m, isActive: newValue } : m))
+    try {
+      await toggleMissionActive(mission.id, newValue)
+    } catch {
+      // Revert on error
+      setAllMissions(prev => prev.map(m => m.id === mission.id ? { ...m, isActive: mission.isActive } : m))
+    } finally {
+      setTogglingId(null)
     }
   }
 
@@ -325,6 +355,88 @@ export function AdminScreen() {
             </div>
           )}
         </div>
+
+        {/* LIBERAR MISSÕES */}
+        {allMissions.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 700, letterSpacing: '1.2px',
+              textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10,
+            }}>
+              Liberar Missões
+            </div>
+            {(() => {
+              const days = Array.from(new Set(allMissions.map(m => m.day))).sort((a, b) => {
+                if (a === null) return 1
+                if (b === null) return -1
+                return a - b
+              })
+              return days.map(day => {
+                const group = allMissions.filter(m => m.day === day)
+                return (
+                  <div key={String(day)} style={{ marginBottom: 16 }}>
+                    <div style={{
+                      fontSize: 11, fontWeight: 700, color: 'var(--text3)',
+                      marginBottom: 6, paddingLeft: 2,
+                    }}>
+                      {day === null ? 'Sempre disponível' : `Dia ${day}`}
+                    </div>
+                    <div style={{
+                      background: 'var(--surface)', border: '1px solid var(--border)',
+                      borderRadius: 14, overflow: 'hidden',
+                    }}>
+                      {group.map((m, i) => (
+                        <div key={m.id}>
+                          {i > 0 && <div style={{ height: 1, background: 'var(--border2)', margin: '0 14px' }} />}
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '11px 14px',
+                            opacity: togglingId === m.id ? 0.6 : 1,
+                            transition: 'opacity 0.15s',
+                          }}>
+                            <span style={{ fontSize: 18, flexShrink: 0, width: 26, textAlign: 'center' }}>{m.icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontSize: 13, fontWeight: 600, color: 'var(--text)',
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                              }}>{m.title}</div>
+                              <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 1 }}>{m.type}</div>
+                            </div>
+                            {/* Toggle switch */}
+                            <button
+                              onClick={() => handleToggleMission(m)}
+                              disabled={togglingId === m.id}
+                              style={{
+                                flexShrink: 0, cursor: 'pointer',
+                                background: 'none', border: 'none', padding: 0,
+                              }}
+                            >
+                              <div style={{
+                                width: 44, height: 24, borderRadius: 12,
+                                background: m.isActive ? 'var(--pink)' : 'var(--bg3)',
+                                position: 'relative',
+                                transition: 'background 0.2s',
+                              }}>
+                                <div style={{
+                                  position: 'absolute', top: 3,
+                                  left: m.isActive ? 23 : 3,
+                                  width: 18, height: 18, borderRadius: '50%',
+                                  background: '#fff',
+                                  transition: 'left 0.2s',
+                                  boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                                }} />
+                              </div>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })
+            })()}
+          </div>
+        )}
       </div>
     </div>
   )

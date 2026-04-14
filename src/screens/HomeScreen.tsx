@@ -49,6 +49,7 @@ export function HomeScreen() {
     }
   }, [openLiveQuestion])
 
+  const [missionsExpanded, setMissionsExpanded] = useState(false)
   const [questionSent, setQuestionSent] = useState(false)
   const [activeReactions, setActiveReactions] = useState<Record<string, boolean>>({})
   const [profileModal, setProfileModal] = useState<ProfileModal | null>(null)
@@ -356,21 +357,33 @@ export function HomeScreen() {
           overflow: 'hidden',
           marginBottom: 14,
         }}>
-          {/* Header with progress bar */}
-          <div style={{ padding: '14px 16px 12px' }}>
+          {/* Header with progress bar — tapping toggles the list */}
+          <div
+            onClick={() => setMissionsExpanded(v => !v)}
+            style={{ padding: '14px 16px 12px', cursor: 'pointer', userSelect: 'none' }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.2px' }}>
                 Missões do dia{' '}
                 <span style={{ fontWeight: 600, color: 'var(--text3)' }}>· {completedCount} de {todayMissions.length}</span>
               </div>
-              {totalXp > 0 && (
-                <div style={{
-                  fontSize: 11, fontWeight: 700, color: 'var(--xp)',
-                  background: 'var(--xp-bg)', padding: '2px 8px', borderRadius: 20,
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {totalXp > 0 && (
+                  <div style={{
+                    fontSize: 11, fontWeight: 700, color: 'var(--xp)',
+                    background: 'var(--xp-bg)', padding: '2px 8px', borderRadius: 20,
+                  }}>
+                    +{totalXp} XP
+                  </div>
+                )}
+                <svg viewBox="0 0 12 8" fill="none" width={11} height={8} style={{
+                  transition: 'transform 0.3s ease',
+                  transform: missionsExpanded ? 'rotate(180deg)' : 'none',
+                  flexShrink: 0,
                 }}>
-                  +{totalXp} XP
-                </div>
-              )}
+                  <path d="M1 1l5 5 5-5" stroke="var(--text3)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
             </div>
             <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden' }}>
               <div style={{
@@ -381,9 +394,19 @@ export function HomeScreen() {
                 transition: 'width 0.5s ease',
               }} />
             </div>
+            {!missionsExpanded && (
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', marginTop: 8 }}>
+                Ver missões ▾
+              </div>
+            )}
           </div>
 
-          {/* Compact mission list */}
+          {/* Collapsible mission list */}
+          <div style={{
+            maxHeight: missionsExpanded ? 900 : 0,
+            overflow: 'hidden',
+            transition: 'max-height 0.38s cubic-bezier(0.4,0,0.2,1)',
+          }}>
           {todayMissions.map((m) => {
             const isPending = m.status === 'pending'
             const isLocked = m.isActive === false
@@ -455,6 +478,7 @@ export function HomeScreen() {
               Nenhuma missão para hoje
             </div>
           )}
+          </div>{/* end collapsible */}
         </div>
 
         {/* LIVE CARD */}
