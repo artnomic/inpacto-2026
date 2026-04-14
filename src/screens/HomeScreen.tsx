@@ -59,6 +59,7 @@ export function HomeScreen() {
   const [missionFilePreview, setMissionFilePreview] = useState<string | null>(null)
   const [missionUploading, setMissionUploading] = useState(false)
   const [missionPending, setMissionPending] = useState(false)
+  const [missionShareToFeed, setMissionShareToFeed] = useState(false)
   const [quizStep, setQuizStep] = useState(0)
   const [quizAnswers, setQuizAnswers] = useState<number[]>([])
   const [quizSubmitted, setQuizSubmitted] = useState(false)
@@ -251,6 +252,7 @@ export function HomeScreen() {
     setMissionFile(null)
     setMissionFilePreview(null)
     setMissionPending(false)
+    setMissionShareToFeed(false)
     setQuizStep(0)
     setQuizAnswers([])
     setQuizSubmitted(false)
@@ -259,8 +261,13 @@ export function HomeScreen() {
   async function handleMissionText() {
     if (!activeMission || !authUserId || !missionText.trim()) return
     setMissionUploading(true)
+    const text = missionText
+    const shareToFeed = missionShareToFeed
     try {
-      await submitMissionText(authUserId, activeMission.id, missionText, activeMission.xpReward)
+      await submitMissionText(authUserId, activeMission.id, text, activeMission.xpReward)
+      if (shareToFeed) {
+        addPost('comment', text, null, null)
+      }
       completeMission(activeMission.id)
       closeMissionSheet()
     } catch {
@@ -273,15 +280,20 @@ export function HomeScreen() {
   async function handleMissionEvidence(isAdmin: boolean) {
     if (!activeMission || !authUserId || !missionFile) return
     setMissionUploading(true)
+    const missionTitle = activeMission.title
+    const shareToFeed = missionShareToFeed
     try {
-      await submitMissionEvidence(authUserId, activeMission.id, missionFile, activeMission.xpReward, isAdmin)
+      const imageUrl = await submitMissionEvidence(authUserId, activeMission.id, missionFile, activeMission.xpReward, isAdmin)
       if (isAdmin) {
         setMissionPending(true)
         // Mark completed locally (status=pending) without crediting XP
         useAppStore.setState(s => ({
-          missions: s.missions.map(m => m.id === activeMission.id ? { ...m, completed: true, status: 'pending' } : m),
+          missions: s.missions.map(m => m.id === activeMission!.id ? { ...m, completed: true, status: 'pending' } : m),
         }))
       } else {
+        if (shareToFeed) {
+          addPost('comment', 'Missão: ' + missionTitle, imageUrl, null)
+        }
         completeMission(activeMission.id)
         closeMissionSheet()
       }
@@ -974,7 +986,7 @@ export function HomeScreen() {
                     title: 'Pergunta ao palestrante',
                     desc: 'Envie uma dúvida para a sessão ao vivo',
                     gradient: 'rgba(53,18,106,.12),rgba(77,193,231,.1)',
-                    disabled: !liveSession || !liveAllowsQA,
+                    disabled: !liveSession,
                     adminOnly: false,
                   },
                   {
@@ -1421,6 +1433,22 @@ export function HomeScreen() {
                   onFocus={e => e.target.style.borderColor = 'var(--pink)'}
                   onBlur={e => e.target.style.borderColor = 'var(--border)'}
                 />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 14px', background: 'var(--bg2)', borderRadius: 10 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text2)' }}>Compartilhar no feed</div>
+                  <button
+                    onClick={() => setMissionShareToFeed(v => !v)}
+                    style={{
+                      width: 44, height: 24, borderRadius: 12, padding: 0, flexShrink: 0,
+                      background: missionShareToFeed ? 'var(--pink)' : 'var(--bg3)',
+                      border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s',
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute', top: 3, left: missionShareToFeed ? 23 : 3,
+                      width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                    }} />
+                  </button>
+                </div>
                 <button
                   onClick={handleMissionText}
                   disabled={!missionText.trim() || missionUploading}
@@ -1472,6 +1500,22 @@ export function HomeScreen() {
                     📎 Selecionar print / foto
                   </button>
                 )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '10px 14px', background: 'var(--bg2)', borderRadius: 10 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text2)' }}>Compartilhar no feed</div>
+                  <button
+                    onClick={() => setMissionShareToFeed(v => !v)}
+                    style={{
+                      width: 44, height: 24, borderRadius: 12, padding: 0, flexShrink: 0,
+                      background: missionShareToFeed ? 'var(--pink)' : 'var(--bg3)',
+                      border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s',
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute', top: 3, left: missionShareToFeed ? 23 : 3,
+                      width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                    }} />
+                  </button>
+                </div>
                 <button
                   onClick={() => handleMissionEvidence(false)}
                   disabled={!missionFile || missionUploading}

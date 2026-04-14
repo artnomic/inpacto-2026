@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react'
 import { useAppStore } from '../store/appStore'
-import { resendVerification } from '../lib/api'
 
 export function VerifyScreen() {
-  const { navigateTo, pendingEmail, verifyEmail, loading } = useAppStore()
+  const { navigateTo, loading } = useAppStore()
+  const pendingEmail: string | null = null
+  const verifyEmail = async (_code: string) => { throw new Error('not implemented') }
+  const resendVerification = async (_email: string) => { throw new Error('not implemented') }
   const [code, setCode] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
   const [resent, setResent] = useState(false)
@@ -87,7 +89,7 @@ export function VerifyScreen() {
       }}>
         <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, background: 'rgba(255,255,255,0.06)', borderRadius: '50%' }} />
         <button
-          onClick={() => navigateTo('signup')}
+          onClick={() => navigateTo('login')}
           style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, marginBottom: 12, padding: 0 }}
         >
           ← Voltar

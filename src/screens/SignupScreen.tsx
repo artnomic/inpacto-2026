@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAppStore } from '../store/appStore'
 
 export function SignupScreen() {
-  const { navigateTo, signup, loading } = useAppStore()
+  const { navigateTo, login, loading } = useAppStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -12,7 +12,7 @@ export function SignupScreen() {
     if (password.length < 6) { setError('A senha precisa ter pelo menos 6 caracteres'); return }
     setError('')
     try {
-      await signup(email, password)
+      await login(email)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao criar conta'
       if (msg.includes('already registered') || msg.includes('User already registered')) {

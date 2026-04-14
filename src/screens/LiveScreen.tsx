@@ -33,7 +33,7 @@ function initials(name: string) {
 }
 
 export function LiveScreen() {
-  const { liveSession, sessions, submitLiveQuestion, refreshLiveSession, setLiveSession, authUserId, user } = useAppStore()
+  const { liveSession, sessions, submitLiveQuestion, refreshLiveSession, setLiveSession, user } = useAppStore()
   const [reactions, setReactions] = useState<Record<string, number>>({})
   const [userReacted, setUserReacted] = useState<Record<string, boolean>>({})
   const [questions, setQuestions] = useState<LiveQuestion[]>([])
@@ -95,6 +95,7 @@ export function LiveScreen() {
       await submitLiveQuestion(liveSession.id, questionText.trim())
       setQuestionText('')
       loadQuestions(liveSession.id)
+      useAppStore.getState().completeMissionByKey('pergunta_palestra')
     } catch (e) {
       console.error(e)
     } finally {

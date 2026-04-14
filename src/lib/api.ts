@@ -276,15 +276,15 @@ export async function submitMissionEvidence(
   file: File,
   xpReward: number,
   isAdmin: boolean
-): Promise<void> {
+): Promise<string> {
   const ext = file.name.split('.').pop()
-  const path = `${userId}/${missionId}.${ext}`
+  const path = `evidence/${userId}/${missionId}.${ext}`
   const { error: uploadError } = await supabase.storage
-    .from('mission-evidence')
+    .from('post-images')
     .upload(path, file, { upsert: true })
   if (uploadError) throw uploadError
 
-  const { data } = supabase.storage.from('mission-evidence').getPublicUrl(path)
+  const { data } = supabase.storage.from('post-images').getPublicUrl(path)
   const status = isAdmin ? 'pending' : 'completed'
 
   const { error } = await supabase
@@ -298,6 +298,8 @@ export async function submitMissionEvidence(
   if (!isAdmin) {
     await addXp(userId, xpReward)
   }
+
+  return data.publicUrl
 }
 
 export async function submitMissionText(
@@ -373,13 +375,20 @@ export async function approveAdminMission(
 }
 
 export async function completeMission(userId: string, missionId: string, xpReward: number) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('user_missions')
-    .insert({ user_id: userId, mission_id: missionId })
+    .upsert(
+      { user_id: userId, mission_id: missionId },
+      { onConflict: 'user_id,mission_id', ignoreDuplicates: true }
+    )
+    .select()
 
   if (error) throw error
 
-  await addXp(userId, xpReward)
+  // Only add XP if a new record was actually inserted (ignoreDuplicates returns empty on conflict)
+  if (data && data.length > 0) {
+    await addXp(userId, xpReward)
+  }
 }
 
 // ─── ACHIEVEMENTS ─────────────────────────────────────────────────────────────
