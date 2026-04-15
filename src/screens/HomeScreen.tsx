@@ -100,7 +100,7 @@ export function HomeScreen() {
 
   // activeDay from store (admin-controlled): 0 = evento não iniciado, 1 = Dia 1, 2 = Dia 2
   const todayMissions = activeDay > 0
-    ? missions.filter(m => m.isActive !== false && (m.day === activeDay || m.day === null))
+    ? missions.filter(m => m.day === activeDay || m.day === null)
     : []
   const completedCount = todayMissions.filter(m => m.completed).length
   const totalXp = todayMissions.reduce((sum, m) => sum + m.xpReward, 0)

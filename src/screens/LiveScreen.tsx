@@ -275,45 +275,47 @@ export function LiveScreen() {
               </div>
             </div>
 
-            {/* Submit Question */}
-            <div style={{
-              background: 'var(--surface)', borderRadius: 16, padding: 16,
-              marginBottom: 14, boxShadow: 'var(--shadow)', border: '1px solid var(--border)',
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
-                {'🎤'} Enviar Pergunta
+            {/* Submit Question — only for palestra and talkshow */}
+            {(liveSession.type === 'palestra' || liveSession.type === 'talkshow') && (
+              <div style={{
+                background: 'var(--surface)', borderRadius: 16, padding: 16,
+                marginBottom: 14, boxShadow: 'var(--shadow)', border: '1px solid var(--border)',
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
+                  {'🎤'} Enviar Pergunta
+                </div>
+                <textarea
+                  value={questionText}
+                  onChange={e => setQuestionText(e.target.value)}
+                  placeholder="Digite sua pergunta para o palestrante..."
+                  rows={3}
+                  style={{
+                    width: '100%', background: 'var(--bg)',
+                    border: '1.5px solid var(--border)', borderRadius: 12,
+                    padding: '10px 12px', fontSize: 14, color: 'var(--text1)',
+                    fontFamily: 'var(--font-body)', resize: 'none', outline: 'none',
+                    boxSizing: 'border-box' as const,
+                  }}
+                />
+                <button
+                  onClick={handleSubmitQuestion}
+                  disabled={submitting || !questionText.trim()}
+                  style={{
+                    width: '100%', marginTop: 8, padding: 12,
+                    background: submitting || !questionText.trim() ? 'var(--border)' : 'var(--grad-warm)',
+                    border: 'none', borderRadius: 12, color: '#fff',
+                    fontWeight: 700, fontSize: 14,
+                    cursor: submitting || !questionText.trim() ? 'not-allowed' : 'pointer',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  {submitting ? 'Enviando...' : 'Enviar Pergunta'}
+                </button>
               </div>
-              <textarea
-                value={questionText}
-                onChange={e => setQuestionText(e.target.value)}
-                placeholder="Digite sua pergunta para o palestrante..."
-                rows={3}
-                style={{
-                  width: '100%', background: 'var(--bg)',
-                  border: '1.5px solid var(--border)', borderRadius: 12,
-                  padding: '10px 12px', fontSize: 14, color: 'var(--text1)',
-                  fontFamily: 'var(--font-body)', resize: 'none', outline: 'none',
-                  boxSizing: 'border-box' as const,
-                }}
-              />
-              <button
-                onClick={handleSubmitQuestion}
-                disabled={submitting || !questionText.trim()}
-                style={{
-                  width: '100%', marginTop: 8, padding: 12,
-                  background: submitting || !questionText.trim() ? 'var(--border)' : 'var(--grad-warm)',
-                  border: 'none', borderRadius: 12, color: '#fff',
-                  fontWeight: 700, fontSize: 14,
-                  cursor: submitting || !questionText.trim() ? 'not-allowed' : 'pointer',
-                  fontFamily: 'var(--font-body)',
-                }}
-              >
-                {submitting ? 'Enviando...' : 'Enviar Pergunta'}
-              </button>
-            </div>
+            )}
 
-            {/* Questions List */}
-            {questions.length > 0 && (
+            {/* Questions List — only for palestra and talkshow */}
+            {(liveSession.type === 'palestra' || liveSession.type === 'talkshow') && questions.length > 0 && (
               <div style={{
                 background: 'var(--surface)', borderRadius: 16, padding: 16,
                 boxShadow: 'var(--shadow)', border: '1px solid var(--border)',
