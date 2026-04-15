@@ -2,8 +2,8 @@ import { useRef, useState, useEffect } from 'react'
 import { useAppStore } from '../store/appStore'
 import { uploadAvatar, upsertProfile } from '../lib/api'
 
-const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 2000, 3000]
-const LEVEL_NAMES = ['Novo', 'Participante', 'Engajado', 'Comprometido', 'Saturado', 'Líder']
+const LEVEL_THRESHOLDS = [0, 150, 400, 800, 1200, 1500]
+const LEVEL_NAMES = ['Chegando', 'Participante', 'Engajado', 'Comprometido', 'Transformado', 'Saturado']
 
 function getConditionText(conditionKey?: string, conditionValue?: number): string {
   if (!conditionKey) return ''

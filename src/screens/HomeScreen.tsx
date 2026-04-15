@@ -875,8 +875,8 @@ export function HomeScreen() {
                 background: 'rgba(250,20,98,0.08)', padding: '4px 12px',
                 borderRadius: 20, border: '1px solid rgba(250,20,98,0.15)',
               }}>
-                {['Novo','Participante','Engajado','Comprometido','Saturado','Líder'][
-                  [0,300,700,1200,2000,3000].reduce((lvl,t,i) => profileModal.xp >= t ? i : lvl, 0)
+                {['Chegando','Participante','Engajado','Comprometido','Transformado','Saturado'][
+                  [0,150,400,800,1200,1500].reduce((lvl,t,i) => profileModal.xp >= t ? i : lvl, 0)
                 ]} · {profileModal.xp} XP
               </div>
               <div style={{
