@@ -2,6 +2,15 @@ import { useState, useEffect, useRef } from 'react'
 import { useAppStore } from '../store/appStore'
 import { supabase } from '../lib/supabase'
 
+// Parse imageUrl: returns array or null
+function parseImageUrl(imageUrl?: string): string[] | null {
+  if (!imageUrl) return null
+  if (imageUrl.startsWith('[')) {
+    try { return JSON.parse(imageUrl) } catch { return null }
+  }
+  return [imageUrl]
+}
+
 interface LiveQuestion {
   id: string
   content: string
@@ -159,35 +168,73 @@ export function LiveScreen() {
               background: 'var(--surface)', borderRadius: 20, padding: 20,
               marginBottom: 14, boxShadow: 'var(--shadow)', border: '1px solid var(--border)',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
-                <div style={{
-                  width: 60, height: 60, borderRadius: '50%',
-                  background: 'var(--grad-warm)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 20, fontWeight: 700, color: '#fff', flexShrink: 0,
-                }}>
-                  {initials(liveSession.speaker || 'S')}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    display: 'inline-block',
-                    background: typeColor(liveSession.type), color: '#fff',
-                    fontSize: 10, fontWeight: 700, borderRadius: 6,
-                    padding: '2px 8px', marginBottom: 4,
-                    textTransform: 'uppercase' as const, letterSpacing: '0.5px',
-                  }}>
-                    {typeLabel(liveSession.type)}
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: 'var(--text1)', lineHeight: 1.3 }}>
-                    {liveSession.title}
-                  </div>
-                  {liveSession.speaker && (
-                    <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>
-                      {liveSession.speaker}
+              {(() => {
+                const images = parseImageUrl(liveSession.imageUrl)
+                const isMulti = images && images.length > 1
+                return (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      {/* Avatar: real photo or initials fallback */}
+                      {images && !isMulti ? (
+                        <img
+                          src={images[0]}
+                          alt={liveSession.speaker}
+                          style={{
+                            width: 64, height: 64, borderRadius: '50%',
+                            objectFit: 'cover', flexShrink: 0,
+                            border: '2px solid var(--border)',
+                          }}
+                        />
+                      ) : !isMulti ? (
+                        <div style={{
+                          width: 60, height: 60, borderRadius: '50%',
+                          background: 'var(--grad-warm)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 20, fontWeight: 700, color: '#fff', flexShrink: 0,
+                        }}>
+                          {initials(liveSession.speaker || 'S')}
+                        </div>
+                      ) : null}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          display: 'inline-block',
+                          background: typeColor(liveSession.type), color: '#fff',
+                          fontSize: 10, fontWeight: 700, borderRadius: 6,
+                          padding: '2px 8px', marginBottom: 4,
+                          textTransform: 'uppercase' as const, letterSpacing: '0.5px',
+                        }}>
+                          {typeLabel(liveSession.type)}
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: 'var(--text1)', lineHeight: 1.3 }}>
+                          {liveSession.title}
+                        </div>
+                        {liveSession.speaker && (
+                          <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>
+                            {liveSession.speaker}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
+                    {/* Multi-photo row for oficinas/talkshow */}
+                    {isMulti && (
+                      <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                        {images!.map((url, i) => (
+                          <img
+                            key={i}
+                            src={url}
+                            alt=""
+                            style={{
+                              width: 56, height: 56, borderRadius: '50%',
+                              objectFit: 'cover',
+                              border: '2px solid var(--border)',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
               {liveSession.description ? (
                 <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
                   {liveSession.description}

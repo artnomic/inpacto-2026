@@ -104,6 +104,7 @@ export interface Session {
   endTime: string
   description: string
   isLive: boolean
+  imageUrl?: string
 }
 
 export interface RankingUser {
