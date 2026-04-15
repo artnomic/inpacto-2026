@@ -367,6 +367,9 @@ export const useAppStore = create<AppState>()(
     const userId = get().authUserId
     if (!userId) return
     const oldAchievements = get().achievements
+    // Verifica e desbloqueia conquistas elegíveis antes de recarregar
+    // (cobre missões completadas antes da feature existir e novas completions)
+    await api.checkAndUnlockAchievements(userId).catch(() => {})
     const achievements = await api.getAchievements(userId)
     set({ achievements })
     const newlyUnlocked = achievements.filter(
@@ -404,13 +407,7 @@ export const useAppStore = create<AppState>()(
     }))
     try {
       await api.completeMission(authUserId, id, mission.xpReward)
-      if (mission.key === 'checkin') {
-        api.checkAchievement(authUserId, 'boas_vindas').catch(() => {})
-        api.checkAchievement(authUserId, 'madrugador').catch(() => {})
-      }
-      api.checkAndUnlockAchievements(authUserId)
-        .catch(() => {})
-        .finally(() => get().loadAchievements())
+      get().loadAchievements()
     } catch {
       set((s) => ({
         missions: s.missions.map(m => m.id === id ? { ...m, completed: false } : m),
