@@ -25,7 +25,7 @@ export function LoginScreen() {
     }}>
       {/* Full-screen background image */}
       <img
-        src="/saturados-splash.jpg"
+        src="/capa-login.jpg"
         alt=""
         style={{
           position: 'absolute', inset: 0,
