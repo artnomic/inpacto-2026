@@ -76,9 +76,9 @@ function MultiAvatarRow({ urls, size = 36 }: { urls: string[]; size?: number }) 
 }
 
 export function AgendaScreen() {
-  const { sessions } = useAppStore()
-  const [day1Open, setDay1Open] = useState(true)
-  const [day2Open, setDay2Open] = useState(false)
+  const { sessions, activeDay } = useAppStore()
+  const [day1Open, setDay1Open] = useState(activeDay === 0 || activeDay === 1)
+  const [day2Open, setDay2Open] = useState(activeDay === 2)
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
 
   const dayOpens = [day1Open, day2Open]

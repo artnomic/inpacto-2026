@@ -42,7 +42,7 @@ function initials(name: string) {
 }
 
 export function LiveScreen() {
-  const { liveSession, sessions, submitLiveQuestion, refreshLiveSession, setLiveSession, user } = useAppStore()
+  const { liveSession, sessions, activeDay, submitLiveQuestion, refreshLiveSession, setLiveSession, user } = useAppStore()
   const [reactions, setReactions] = useState<Record<string, number>>({})
   const [userReacted, setUserReacted] = useState<Record<string, boolean>>({})
   const [questions, setQuestions] = useState<LiveQuestion[]>([])
@@ -352,12 +352,12 @@ export function LiveScreen() {
             </div>
 
             {/* Today's upcoming schedule */}
-            {sessions.length > 0 && (
+            {sessions.length > 0 && activeDay > 0 && (
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.5px', paddingLeft: 2 }}>
-                  Próximas Sessões
+                  Programação do Dia {activeDay}
                 </div>
-                {sessions.filter(s => s.type !== 'break').slice(0, 6).map(s => (
+                {sessions.filter(s => s.day === activeDay && s.type !== 'break').slice(0, 6).map(s => (
                   <div key={s.id} style={{
                     background: 'var(--surface)', borderRadius: 14, padding: '14px 16px',
                     marginBottom: 10, border: '1px solid var(--border)',

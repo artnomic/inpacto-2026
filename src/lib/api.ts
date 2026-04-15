@@ -241,6 +241,25 @@ export async function getLiveSessionManual(): Promise<Session | null> {
   }
 }
 
+// ─── APP CONFIG ───────────────────────────────────────────────────────────────
+
+export async function getActiveDay(): Promise<number> {
+  const { data } = await supabase
+    .from('app_config')
+    .select('value')
+    .eq('key', 'active_day')
+    .single()
+  return data ? Number(data.value) : 0
+}
+
+export async function setActiveDay(day: number): Promise<void> {
+  const { error } = await supabase
+    .from('app_config')
+    .update({ value: String(day) })
+    .eq('key', 'active_day')
+  if (error) throw error
+}
+
 // ─── MISSIONS ─────────────────────────────────────────────────────────────────
 
 export async function getMissionsWithStatus(userId: string): Promise<Mission[]> {

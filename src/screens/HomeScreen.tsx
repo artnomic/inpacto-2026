@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { uploadPostImage, submitMissionEvidence, submitMissionText } from '../lib/api'
 import { useAppStore } from '../store/appStore'
 import type { Mission } from '../store/appStore'
@@ -31,7 +31,7 @@ type ProfileModal = { name: string; initials: string; church: string; xp: number
 
 export function HomeScreen() {
   const {
-    missions, feed, authUserId, user, eventConfig, liveSession, toggleLike, addReaction, addPost,
+    missions, feed, authUserId, user, eventConfig, liveSession, activeDay, toggleLike, addReaction, addPost,
     submitLiveQuestion, addSheetOpen, setAddSheetOpen, completeMissionByKey, openLiveQuestion,
     setOpenLiveQuestion, refreshLiveSession, completeMission, showToast,
     deletePost,
@@ -98,19 +98,10 @@ export function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Calculate current event day from eventConfig
-  const currentEventDay = useMemo(() => {
-    if (!eventConfig) return 1
-    const startDate = new Date(eventConfig.eventStartDate + 'T00:00:00')
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const diff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-    if (diff < 0) return 1
-    if (diff >= eventConfig.totalDays) return eventConfig.totalDays
-    return diff + 1
-  }, [eventConfig])
-
-  const todayMissions = missions.filter(m => m.day === currentEventDay || m.day === null)
+  // activeDay from store (admin-controlled): 0 = evento não iniciado, 1 = Dia 1, 2 = Dia 2
+  const todayMissions = activeDay > 0
+    ? missions.filter(m => m.isActive !== false && (m.day === activeDay || m.day === null))
+    : []
   const completedCount = todayMissions.filter(m => m.completed).length
   const totalXp = todayMissions.reduce((sum, m) => sum + m.xpReward, 0)
   const progressPct = todayMissions.length > 0 ? (completedCount / todayMissions.length) * 100 : 0
@@ -485,7 +476,17 @@ export function HomeScreen() {
               </div>
             )
           })}
-          {todayMissions.length === 0 && (
+          {activeDay === 0 ? (
+            <div style={{ padding: '20px 16px', textAlign: 'center' }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>
+                Aguardando início do evento
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text3)' }}>
+                As missões serão liberadas quando o dia começar
+              </div>
+            </div>
+          ) : todayMissions.length === 0 && (
             <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
               Nenhuma missão para hoje
             </div>

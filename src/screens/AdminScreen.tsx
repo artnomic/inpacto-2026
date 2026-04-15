@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../store/appStore'
-import { getSessions, setSessionLive, clearAllLive, getAdminPendingMissions, approveAdminMission, getAllMissions, toggleMissionActive } from '../lib/api'
+import { getSessions, setSessionLive, clearAllLive, getAdminPendingMissions, approveAdminMission, getAllMissions, toggleMissionActive, getActiveDay, setActiveDay } from '../lib/api'
 import type { Session } from '../store/appStore'
 
 const LIVE_TYPES: Session['type'][] = ['palestra', 'talkshow', 'louvor', 'especial']
@@ -18,8 +18,10 @@ interface AdminScreenState {
 }
 
 export function AdminScreen() {
-  const { navigateTo, showToast } = useAppStore()
+  const { navigateTo, showToast, activeDay: storeActiveDay, setActiveDayLocal } = useAppStore()
   const [activeTab, setActiveTab] = useState<Tab>('live')
+  const [localActiveDay, setLocalActiveDay] = useState<number>(storeActiveDay)
+  const [dayActing, setDayActing] = useState(false)
 
   // ── Ao Vivo state ────────────────────────────────────────────────────
   const [sessions, setSessions] = useState<Session[]>([])
@@ -73,6 +75,7 @@ export function AdminScreen() {
     load()
     loadPending()
     loadAllMissions()
+    getActiveDay().then(d => setLocalActiveDay(d))
     const interval = setInterval(load, 10000)
     return () => clearInterval(interval)
   }, [])
@@ -129,6 +132,19 @@ export function AdminScreen() {
       showToast('Erro ao aprovar: ' + msg, 'error')
     } finally {
       setApprovingId(null)
+    }
+  }
+
+  async function handleSetDay(day: number) {
+    setDayActing(true)
+    try {
+      await setActiveDay(day)
+      setLocalActiveDay(day)
+      setActiveDayLocal(day)
+    } catch {
+      showToast('Erro ao atualizar dia', 'error')
+    } finally {
+      setDayActing(false)
     }
   }
 
@@ -220,6 +236,78 @@ export function AdminScreen() {
         {/* ─── AO VIVO ─────────────────────────────────────────────────── */}
         {activeTab === 'live' && (
           <>
+            {/* Day control card */}
+            <div style={{
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 16, padding: 16, marginBottom: 16,
+            }}>
+              <div style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: '1px',
+                textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12,
+              }}>
+                Controle do Dia
+              </div>
+
+              {/* Status */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14,
+                background: 'var(--bg2)', borderRadius: 10, padding: '10px 12px',
+              }}>
+                <span style={{ fontSize: 18 }}>
+                  {localActiveDay === 0 ? '⏸️' : '🟢'}
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+                  {localActiveDay === 0
+                    ? 'Nenhum dia iniciado'
+                    : `Dia ${localActiveDay} em andamento`}
+                </span>
+              </div>
+
+              {/* Day buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[1, 2].map(day => {
+                  const isActive = localActiveDay === day
+                  return (
+                    <div key={day} style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => handleSetDay(day)}
+                        disabled={dayActing || isActive}
+                        style={{
+                          flex: 1, padding: '10px 0',
+                          background: isActive ? 'var(--bg3)' : 'rgba(0,180,80,0.1)',
+                          border: isActive ? '1.5px solid var(--border)' : '1.5px solid rgba(0,180,80,0.35)',
+                          borderRadius: 10,
+                          color: isActive ? 'var(--text3)' : '#00a050',
+                          fontSize: 13, fontWeight: 700,
+                          cursor: dayActing || isActive ? 'not-allowed' : 'pointer',
+                          fontFamily: 'var(--font-body)',
+                        }}
+                      >
+                        {isActive ? `✓ Dia ${day} ativo` : `▶ Iniciar Dia ${day}`}
+                      </button>
+                      {isActive && (
+                        <button
+                          onClick={() => handleSetDay(0)}
+                          disabled={dayActing}
+                          style={{
+                            padding: '10px 14px',
+                            background: 'rgba(200,0,0,0.1)',
+                            border: '1.5px solid rgba(200,0,0,0.4)',
+                            borderRadius: 10, color: '#cc0000',
+                            fontSize: 13, fontWeight: 700,
+                            cursor: dayActing ? 'not-allowed' : 'pointer',
+                            fontFamily: 'var(--font-body)',
+                          }}
+                        >
+                          ■ Finalizar
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
             {hasLive && (
               <button
                 onClick={handleClearAll}
