@@ -474,15 +474,17 @@ export async function getAchievements(userId: string): Promise<Achievement[]> {
   }))
 }
 
-// Verifica e desbloqueia conquistas automaticamente após completar uma missão
+// Verifica e desbloqueia conquistas automaticamente após completar uma missão.
+// condition_key encoding:
+//   "mission_key:<key>"                 → completou a missão com esse key
+//   "mission_key_any_evidence:<k1,k2>"  → completou QUALQUER missão com esses keys
+//   "missions_count"                    → total de missões completadas >= condition_value
 export async function checkAndUnlockAchievements(userId: string): Promise<void> {
-  // Busca conquistas com condições definidas
   const { data: achievements } = await supabase
     .from('achievements')
     .select('id, key, condition_key, condition_value')
   if (!achievements || achievements.length === 0) return
 
-  // Busca missões completadas pelo usuário
   const { data: userMissions } = await supabase
     .from('user_missions')
     .select('mission_id')
@@ -491,11 +493,10 @@ export async function checkAndUnlockAchievements(userId: string): Promise<void> 
   const completedIds = new Set((userMissions ?? []).map((um: any) => um.mission_id as string))
   if (completedIds.size === 0) return
 
-  // Busca todas as missões para lookup por tipo/eixo/key
   const { data: allMissions } = await supabase
     .from('missions')
-    .select('id, type, eixo, key')
-  const missions = (allMissions ?? []) as { id: string; type: string; eixo: string | null; key: string | null }[]
+    .select('id, key')
+  const missions = (allMissions ?? []) as { id: string; key: string | null }[]
 
   for (const ach of achievements) {
     const { condition_key, condition_value, key } = ach as { condition_key: string | null; condition_value: number | null; key: string }
@@ -503,38 +504,18 @@ export async function checkAndUnlockAchievements(userId: string): Promise<void> 
 
     let shouldUnlock = false
 
-    switch (condition_key) {
-      case 'missions_count': {
-        shouldUnlock = completedIds.size >= (condition_value ?? 1)
-        break
-      }
-      case 'quizzes_complete': {
-        const quizzes = missions.filter(m => m.type === 'quiz')
-        shouldUnlock = quizzes.length > 0 && quizzes.every(m => completedIds.has(m.id))
-        break
-      }
-      case 'checkins_complete': {
-        const done = missions.filter(m => m.type === 'checkin' && completedIds.has(m.id))
-        shouldUnlock = done.length >= 2
-        break
-      }
-      case 'eixo_dopamina_complete': {
-        const dopamina = missions.filter(m => m.eixo === 'dopamina')
-        shouldUnlock = dopamina.length > 0 && dopamina.every(m => completedIds.has(m.id))
-        break
-      }
-      case 'won_screen_time': {
-        const screenTime = missions.filter(m => m.type === 'admin' && m.key?.includes('menor_tela'))
-        shouldUnlock = screenTime.some(m => completedIds.has(m.id))
-        break
-      }
-      case 'questions_count': {
-        const questions = missions.filter(m => m.key === 'pergunta_palestra')
-        const count = questions.filter(m => completedIds.has(m.id)).length
-        shouldUnlock = count >= (condition_value ?? 1)
-        break
-      }
-      // connections_count, states_count, top3_ranking: dependem de texto livre, não verificados aqui
+    if (condition_key.startsWith('mission_key_any_evidence:')) {
+      // Desbloqueia se completou QUALQUER missão da lista
+      const missionKeys = condition_key.slice('mission_key_any_evidence:'.length).split(',')
+      const matched = missions.filter(m => m.key && missionKeys.includes(m.key))
+      shouldUnlock = matched.some(m => completedIds.has(m.id))
+    } else if (condition_key.startsWith('mission_key:')) {
+      // Desbloqueia se completou a missão com esse key específico
+      const missionKey = condition_key.slice('mission_key:'.length)
+      const mission = missions.find(m => m.key === missionKey)
+      shouldUnlock = !!mission && completedIds.has(mission.id)
+    } else if (condition_key === 'missions_count') {
+      shouldUnlock = completedIds.size >= (condition_value ?? 1)
     }
 
     if (shouldUnlock) {
