@@ -7,19 +7,17 @@ const LEVEL_NAMES = ['Novo', 'Participante', 'Engajado', 'Comprometido', 'Satura
 
 function getConditionText(conditionKey?: string, conditionValue?: number): string {
   if (!conditionKey) return ''
-  const v = conditionValue ?? 1
-  switch (conditionKey) {
-    case 'states_count': return `Conversar com pessoas de ${v} estados diferentes`
-    case 'eixo_dopamina_complete': return 'Completar todas as missões do eixo Dopamina'
-    case 'connections_count': return `Fazer ${v} ou mais conexões com pessoas novas`
-    case 'questions_count': return `Enviar perguntas em ${v} ou mais palestras`
-    case 'quizzes_complete': return 'Completar todos os quizzes de palestra'
-    case 'checkins_complete': return 'Fazer check-in nos 2 momentos de louvor'
-    case 'top3_ranking': return 'Estar no Top 3 do ranking ao final da conferência'
-    case 'missions_count': return `Completar ${v} ou mais missões`
-    case 'won_screen_time': return 'Vencer a missão de menor tempo de tela em qualquer dia'
-    default: return ''
+  if (conditionKey.startsWith('mission_key_any_evidence:')) {
+    return 'Registrar um momento da conferência com foto'
   }
+  if (conditionKey.startsWith('mission_key:')) {
+    const missionKey = conditionKey.slice('mission_key:'.length)
+    return 'Completar a missão: ' + missionKey.replace(/_/g, ' ')
+  }
+  if (conditionKey === 'missions_count') {
+    return `Completar ${conditionValue ?? 10} ou mais missões`
+  }
+  return ''
 }
 
 export function ProfileScreen() {
