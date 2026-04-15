@@ -382,8 +382,8 @@ export const useAppStore = create<AppState>()(
     const { authUserId, missions, user } = get()
     const mission = missions.find(m => m.id === id)
     if (!mission || mission.completed || !authUserId) return
-    const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 2000, 3000]
-    const LEVEL_NAMES = ['Novo', 'Participante', 'Engajado', 'Comprometido', 'Saturado', 'Líder']
+    const LEVEL_THRESHOLDS = [0, 150, 400, 800, 1200, 1500]
+    const LEVEL_NAMES = ['Chegando', 'Participante', 'Engajado', 'Comprometido', 'Transformado', 'Saturado']
     const computeLevel = (xp: number) => {
       for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
         if (xp >= LEVEL_THRESHOLDS[i]) return i
