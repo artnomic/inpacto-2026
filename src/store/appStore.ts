@@ -572,12 +572,13 @@ export const useAppStore = create<AppState>()(
     const product = products.find(p => p.id === productId)
     if (!product) return
     const wasInWishlist = product.inWishlist
+    const newInWishlist = !wasInWishlist
     set((s) => ({
-      products: s.products.map(p => p.id === productId ? { ...p, inWishlist: !p.inWishlist } : p),
+      products: s.products.map(p => p.id === productId ? { ...p, inWishlist: newInWishlist } : p),
       mocWishlistIds: productId.startsWith('moc-')
-        ? wasInWishlist
-          ? s.mocWishlistIds.filter(id => id !== productId)
-          : [...s.mocWishlistIds, productId]
+        ? newInWishlist
+          ? [...new Set([...s.mocWishlistIds, productId])]
+          : s.mocWishlistIds.filter(id => id !== productId)
         : s.mocWishlistIds,
     }))
     if (!wasInWishlist) {
@@ -592,7 +593,7 @@ export const useAppStore = create<AppState>()(
     if (!productId.startsWith('moc-')) {
       api.toggleWishlist(authUserId, productId, wasInWishlist).catch(() => {
         set((s) => ({
-          products: s.products.map(p => p.id === productId ? { ...p, inWishlist: !p.inWishlist } : p)
+          products: s.products.map(p => p.id === productId ? { ...p, inWishlist: wasInWishlist } : p),
         }))
       })
     }
