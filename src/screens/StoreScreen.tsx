@@ -199,7 +199,7 @@ export function StoreScreen() {
                 <img
                   src={selected.image}
                   alt={selected.name}
-                  style={{ width: '100%', height: 160, borderRadius: 16, objectFit: 'cover', marginBottom: 18, border: '1px solid var(--border)', display: 'block' }}
+                  style={{ width: '100%', height: 240, borderRadius: 16, objectFit: 'contain', marginBottom: 18, border: '1px solid var(--border)', display: 'block', background: 'var(--bg2)' }}
                 />
               ) : (
                 <div style={{ width: '100%', height: 160, background: 'linear-gradient(135deg, rgba(255,143,68,.12), rgba(250,20,98,.08))', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, marginBottom: 18, border: '1px solid var(--border)' }}>
