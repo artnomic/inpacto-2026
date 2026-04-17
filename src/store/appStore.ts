@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import * as api from '../lib/api'
 import { supabase } from '../lib/supabase'
+import { MOCIDADE_PRODUCTS } from '../lib/mocidadeProducts'
 
 let _feedChannel: ReturnType<typeof supabase.channel> | null = null
 let _liveChannel: ReturnType<typeof supabase.channel> | null = null
@@ -163,6 +164,7 @@ interface AppState {
   liveSession: Session | null
   ranking: RankingUser[]
   products: Product[]
+  mocWishlistIds: string[]
   notes: Note[]
   achievements: Achievement[]
   activeNoteSessionId: string | null
@@ -228,6 +230,7 @@ export const useAppStore = create<AppState>()(
   liveSession: null,
   ranking: [],
   products: [],
+  mocWishlistIds: [],
   notes: [],
   achievements: [],
   activeNoteSessionId: null,
@@ -288,6 +291,7 @@ export const useAppStore = create<AppState>()(
       liveSession: null,
       ranking: [],
       products: [],
+      mocWishlistIds: [],
       notes: [],
       achievements: [],
       currentScreen: 'login',
@@ -316,7 +320,13 @@ export const useAppStore = create<AppState>()(
         api.getAchievements(userId),
       ])
     const notes = await api.getNotes(userId, sessions)
-    set({ eventConfig, sessions, missions, feed, ranking, products, notes, liveSession, achievements })
+    const { mocWishlistIds } = get()
+    const mocProducts: Product[] = MOCIDADE_PRODUCTS.map(p => ({
+      ...p,
+      inWishlist: mocWishlistIds.includes(p.id),
+      purchased: false,
+    }))
+    set({ eventConfig, sessions, missions, feed, ranking, products: [...mocProducts, ...products], notes, liveSession, achievements })
 
     // Refresh static data in background so any admin changes eventually propagate
     if (cachedEventConfig || cachedSessions.length) {
@@ -558,7 +568,12 @@ export const useAppStore = create<AppState>()(
     if (!product) return
     const wasInWishlist = product.inWishlist
     set((s) => ({
-      products: s.products.map(p => p.id === productId ? { ...p, inWishlist: !p.inWishlist } : p)
+      products: s.products.map(p => p.id === productId ? { ...p, inWishlist: !p.inWishlist } : p),
+      mocWishlistIds: productId.startsWith('moc-')
+        ? wasInWishlist
+          ? s.mocWishlistIds.filter(id => id !== productId)
+          : [...s.mocWishlistIds, productId]
+        : s.mocWishlistIds,
     }))
     if (!wasInWishlist) {
       const newCount = products.filter(p => p.inWishlist).length + 1
@@ -569,11 +584,13 @@ export const useAppStore = create<AppState>()(
         api.checkAchievement(authUserId, 'wishlist_cheia').then(() => get().loadAchievements()).catch(() => {})
       }
     }
-    api.toggleWishlist(authUserId, productId, wasInWishlist).catch(() => {
-      set((s) => ({
-        products: s.products.map(p => p.id === productId ? { ...p, inWishlist: !p.inWishlist } : p)
-      }))
-    })
+    if (!productId.startsWith('moc-')) {
+      api.toggleWishlist(authUserId, productId, wasInWishlist).catch(() => {
+        set((s) => ({
+          products: s.products.map(p => p.id === productId ? { ...p, inWishlist: !p.inWishlist } : p)
+        }))
+      })
+    }
   },
 
   markPurchased: (productId) => {
@@ -698,6 +715,7 @@ export const useAppStore = create<AppState>()(
         authUserId: state.authUserId,
         eventConfig: state.eventConfig,
         sessions: state.sessions,
+        mocWishlistIds: state.mocWishlistIds,
       }),
     }
   )
