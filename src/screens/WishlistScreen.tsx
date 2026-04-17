@@ -136,7 +136,7 @@ export function WishlistScreen() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {product.purchased ? '✅ Comprado' : '✓ Marcar'}
+                      {product.purchased ? '✅ Comprado' : '✓ Comprei'}
                     </button>
                     <button
                       onClick={() => toggleWishlist(product.id)}
