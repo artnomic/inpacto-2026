@@ -18,10 +18,25 @@ export function StoreScreen() {
   const { products, toggleWishlist, navigateTo } = useAppStore()
   const [tab, setTab] = useState<StoreTab>('shop')
   const [selected, setSelected] = useState<Product | null>(null)
+  const [mocWishlist, setMocWishlist] = useState<Set<string>>(new Set())
+
+  const toggleMocWishlist = (id: string) => {
+    setMocWishlist(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+    setSelected(prev => prev?.id === id ? { ...prev, inWishlist: !prev.inWishlist } : prev)
+  }
+
+  const mocidadeProducts = MOCIDADE_PRODUCTS.map(p => ({ ...p, inWishlist: mocWishlist.has(p.id) }))
 
   const filtered = tab === 'shop'
-    ? MOCIDADE_PRODUCTS
+    ? mocidadeProducts
     : products.filter(p => p.category === tab)
+
+  const handleToggleWishlist = (id: string) =>
+    tab === 'shop' ? toggleMocWishlist(id) : toggleWishlist(id)
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
@@ -149,7 +164,7 @@ export function StoreScreen() {
                     R$ {product.price.toFixed(2).replace('.', ',')}
                   </div>
                   <button
-                    onClick={e => { e.stopPropagation(); toggleWishlist(product.id) }}
+                    onClick={e => { e.stopPropagation(); handleToggleWishlist(product.id) }}
                     style={{
                       background: product.inWishlist ? 'rgba(250,20,98,0.1)' : 'var(--bg2)',
                       border: product.inWishlist ? '1px solid var(--pink)' : '1px solid var(--border)',
@@ -221,7 +236,7 @@ export function StoreScreen() {
               {selected.description}
             </p>
             <button
-              onClick={() => { toggleWishlist(selected.id); setSelected(null) }}
+              onClick={() => { handleToggleWishlist(selected.id); setSelected(null) }}
               style={{
                 width: '100%',
                 padding: 14,
