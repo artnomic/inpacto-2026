@@ -4,39 +4,12 @@ import type { Product } from '../store/appStore'
 
 type StoreTab = 'shop' | 'food'
 
-const MOCIDADE_PRODUCTS: Product[] = [
-  { id: 'moc-garrafa1', category: 'shop', name: 'Garrafa 1', price: 90.80, emoji: '🫙', image: '/loja/garrafa-1.jpeg', description: 'Garrafa exclusiva Mocidade.', inWishlist: false },
-  { id: 'moc-garrafa2', category: 'shop', name: 'Garrafa 2', price: 78.80, emoji: '🫙', image: '/loja/garrafa-2.jpeg', description: 'Garrafa exclusiva Mocidade.', inWishlist: false },
-  { id: 'moc-copo',     category: 'shop', name: 'Copo',      price: 70.80, emoji: '🥤', description: 'Copo exclusivo Mocidade.', inWishlist: false },
-  { id: 'moc-caderno',  category: 'shop', name: 'Caderno',   price: 38.80, emoji: '📓', image: '/loja/caderno.jpeg',  description: 'Caderno exclusivo Mocidade.', inWishlist: false },
-  { id: 'moc-moletom',  category: 'shop', name: 'Moletom',   price: 159.80, emoji: '🧥', image: '/loja/moletom.png',  description: 'Moletom exclusivo Mocidade.', inWishlist: false },
-  { id: 'moc-camisa1',  category: 'shop', name: 'Camisa 1',  price: 89.80, emoji: '👕', image: '/loja/camisa-1.png', description: 'Camisa exclusiva Mocidade.', inWishlist: false },
-  { id: 'moc-camisa2',  category: 'shop', name: 'Camisa 2',  price: 89.80, emoji: '👕', image: '/loja/camisa-2.png', description: 'Camisa exclusiva Mocidade.', inWishlist: false },
-]
-
 export function StoreScreen() {
   const { products, toggleWishlist, navigateTo } = useAppStore()
   const [tab, setTab] = useState<StoreTab>('shop')
   const [selected, setSelected] = useState<Product | null>(null)
-  const [mocWishlist, setMocWishlist] = useState<Set<string>>(new Set())
 
-  const toggleMocWishlist = (id: string) => {
-    setMocWishlist(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-    setSelected(prev => prev?.id === id ? { ...prev, inWishlist: !prev.inWishlist } : prev)
-  }
-
-  const mocidadeProducts = MOCIDADE_PRODUCTS.map(p => ({ ...p, inWishlist: mocWishlist.has(p.id) }))
-
-  const filtered = tab === 'shop'
-    ? mocidadeProducts
-    : products.filter(p => p.category === tab)
-
-  const handleToggleWishlist = (id: string) =>
-    tab === 'shop' ? toggleMocWishlist(id) : toggleWishlist(id)
+  const filtered = products.filter(p => p.category === tab)
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
@@ -164,7 +137,7 @@ export function StoreScreen() {
                     R$ {product.price.toFixed(2).replace('.', ',')}
                   </div>
                   <button
-                    onClick={e => { e.stopPropagation(); handleToggleWishlist(product.id) }}
+                    onClick={e => { e.stopPropagation(); toggleWishlist(product.id) }}
                     style={{
                       background: product.inWishlist ? 'rgba(250,20,98,0.1)' : 'var(--bg2)',
                       border: product.inWishlist ? '1px solid var(--pink)' : '1px solid var(--border)',
@@ -236,7 +209,7 @@ export function StoreScreen() {
               {selected.description}
             </p>
             <button
-              onClick={() => { handleToggleWishlist(selected.id); setSelected(null) }}
+              onClick={() => { toggleWishlist(selected.id); setSelected(null) }}
               style={{
                 width: '100%',
                 padding: 14,
