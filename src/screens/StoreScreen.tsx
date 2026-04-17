@@ -4,12 +4,24 @@ import type { Product } from '../store/appStore'
 
 type StoreTab = 'shop' | 'food'
 
+const MOCIDADE_PRODUCTS: Product[] = [
+  { id: 'moc-garrafa1', category: 'shop', name: 'Garrafa 1', price: 90.80, emoji: '🫙', image: '/loja/garrafa-1.jpeg', description: 'Garrafa exclusiva Mocidade.', inWishlist: false },
+  { id: 'moc-garrafa2', category: 'shop', name: 'Garrafa 2', price: 78.80, emoji: '🫙', image: '/loja/garrafa-2.jpeg', description: 'Garrafa exclusiva Mocidade.', inWishlist: false },
+  { id: 'moc-copo',     category: 'shop', name: 'Copo',      price: 70.80, emoji: '🥤', description: 'Copo exclusivo Mocidade.', inWishlist: false },
+  { id: 'moc-caderno',  category: 'shop', name: 'Caderno',   price: 38.80, emoji: '📓', image: '/loja/caderno.jpeg',  description: 'Caderno exclusivo Mocidade.', inWishlist: false },
+  { id: 'moc-moletom',  category: 'shop', name: 'Moletom',   price: 159.80, emoji: '🧥', image: '/loja/moletom.png',  description: 'Moletom exclusivo Mocidade.', inWishlist: false },
+  { id: 'moc-camisa1',  category: 'shop', name: 'Camisa 1',  price: 89.80, emoji: '👕', image: '/loja/camisa-1.png', description: 'Camisa exclusiva Mocidade.', inWishlist: false },
+  { id: 'moc-camisa2',  category: 'shop', name: 'Camisa 2',  price: 89.80, emoji: '👕', image: '/loja/camisa-2.png', description: 'Camisa exclusiva Mocidade.', inWishlist: false },
+]
+
 export function StoreScreen() {
   const { products, toggleWishlist, navigateTo } = useAppStore()
   const [tab, setTab] = useState<StoreTab>('shop')
   const [selected, setSelected] = useState<Product | null>(null)
 
-  const filtered = products.filter(p => p.category === tab)
+  const filtered = tab === 'shop'
+    ? MOCIDADE_PRODUCTS
+    : products.filter(p => p.category === tab)
 
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
