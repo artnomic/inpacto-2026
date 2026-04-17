@@ -105,6 +105,7 @@ export interface Session {
   endTime: string
   description: string
   isLive: boolean
+  imageUrl?: string
 }
 
 export interface RankingUser {
@@ -167,6 +168,7 @@ interface AppState {
   mocWishlistIds: string[]
   notes: Note[]
   achievements: Achievement[]
+  activeDay: number
   activeNoteSessionId: string | null
   xpAnimation: boolean
   xpGained: number
@@ -214,6 +216,7 @@ interface AppState {
   setUserAvatar: (url: string) => void
   showCelebration: (data: { type: 'mission' | 'achievement' | 'level'; title: string; xp?: number; icon?: string }) => void
   hideCelebration: () => void
+  setActiveDayLocal: (day: number) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -233,6 +236,7 @@ export const useAppStore = create<AppState>()(
   mocWishlistIds: [],
   notes: [],
   achievements: [],
+  activeDay: 0,
   activeNoteSessionId: null,
   xpAnimation: false,
   xpGained: 0,
@@ -308,7 +312,7 @@ export const useAppStore = create<AppState>()(
 
     // eventConfig and sessions are static for the event duration — skip re-fetching if already cached.
     // They'll still refresh lazily in the background to pick up any admin changes.
-    const [eventConfig, sessions, missions, feed, ranking, products, liveSession, achievements] =
+    const [eventConfig, sessions, missions, feed, ranking, products, liveSession, achievements, activeDay] =
       await Promise.all([
         cachedEventConfig ? Promise.resolve(cachedEventConfig) : api.getEventConfig(),
         cachedSessions.length ? Promise.resolve(cachedSessions) : api.getSessions(),
@@ -318,6 +322,7 @@ export const useAppStore = create<AppState>()(
         api.getProducts(userId),
         api.getLiveSession(),
         api.getAchievements(userId),
+        api.getActiveDay(),
       ])
     const notes = await api.getNotes(userId, sessions)
     const { mocWishlistIds } = get()
@@ -326,7 +331,7 @@ export const useAppStore = create<AppState>()(
       inWishlist: mocWishlistIds.includes(p.id),
       purchased: false,
     }))
-    set({ eventConfig, sessions, missions, feed, ranking, products: [...mocProducts, ...products], notes, liveSession, achievements })
+    set({ eventConfig, sessions, missions, feed, ranking, products: [...mocProducts, ...products], notes, liveSession, achievements, activeDay })
 
     // Refresh static data in background so any admin changes eventually propagate
     if (cachedEventConfig || cachedSessions.length) {
@@ -663,17 +668,10 @@ export const useAppStore = create<AppState>()(
   },
 
   completeMissionByKey: (key: string) => {
-    const { missions, eventConfig, authUserId } = get()
+    const { missions, activeDay, authUserId } = get()
     if (!authUserId) return
 
-    let currentDay: number | null = null
-    if (eventConfig) {
-      const startDate = new Date(eventConfig.eventStartDate + 'T00:00:00')
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const diff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-      currentDay = diff < 0 ? 1 : diff >= eventConfig.totalDays ? eventConfig.totalDays : diff + 1
-    }
+    const currentDay: number | null = activeDay > 0 ? activeDay : null
 
     // Match mission by key: day=null (applies to all days) OR day=currentDay
     const matchFn = (m: Mission) =>
@@ -704,6 +702,7 @@ export const useAppStore = create<AppState>()(
   setUserAvatar: (url: string) => set((s) => ({ user: { ...s.user, avatar: url } })),
   showCelebration: (data: { type: 'mission' | 'achievement' | 'level'; title: string; xp?: number; icon?: string }) => set({ celebrationModal: data }),
   hideCelebration: () => set({ celebrationModal: null }),
+  setActiveDayLocal: (day: number) => set({ activeDay: day }),
     }),
     {
       name: 'inpacto-app-storage',

@@ -36,10 +36,49 @@ const DAY_INFO = [
   { day: 2, label: 'Dia 2 · 02/05', weekday: 'Sábado',      theme: 'A vida que vale a pena ser vivida' },
 ]
 
+// Parse imageUrl: returns array (single-item or multi) or null
+function parseImageUrl(imageUrl?: string): string[] | null {
+  if (!imageUrl) return null
+  if (imageUrl.startsWith('[')) {
+    try { return JSON.parse(imageUrl) } catch { return null }
+  }
+  return [imageUrl]
+}
+
+// Small circular avatar for cards
+function SpeakerAvatar({ src, size = 40 }: { src: string; size?: number }) {
+  return (
+    <img
+      src={src}
+      alt=""
+      style={{
+        width: size, height: size,
+        borderRadius: '50%',
+        objectFit: 'cover',
+        flexShrink: 0,
+        border: '2px solid var(--surface)',
+      }}
+    />
+  )
+}
+
+// Row of multiple small avatars (for oficinas/talkshow)
+function MultiAvatarRow({ urls, size = 36 }: { urls: string[]; size?: number }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6 }}>
+      {urls.map((url, i) => (
+        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          <SpeakerAvatar src={url} size={size} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function AgendaScreen() {
-  const { sessions } = useAppStore()
-  const [day1Open, setDay1Open] = useState(true)
-  const [day2Open, setDay2Open] = useState(false)
+  const { sessions, activeDay } = useAppStore()
+  const [day1Open, setDay1Open] = useState(activeDay === 0 || activeDay === 1)
+  const [day2Open, setDay2Open] = useState(activeDay === 2)
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
 
   const dayOpens = [day1Open, day2Open]
@@ -111,6 +150,8 @@ export function AgendaScreen() {
                     const cfg = TYPE_CONFIG[session.type] || TYPE_CONFIG.palestra
                     const icon = TYPE_ICON[session.type] || '📌'
                     const isLast = idx === daySessions.length - 1
+                    const images = parseImageUrl(session.imageUrl)
+                    const isMulti = images && images.length > 1
 
                     if (!isCard) {
                       // Simple row for breaks/intervals/groups/closing
@@ -167,23 +208,29 @@ export function AgendaScreen() {
                         </div>
                         {/* Content */}
                         <div style={{ flex: 1, paddingBottom: 4 }}>
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 2 }}>
-                            <span style={{ fontSize: 15 }}>{icon}</span>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            {/* Single avatar on the right side */}
+                            {images && !isMulti && (
+                              <SpeakerAvatar src={images[0]} size={40} />
+                            )}
                             <div style={{ flex: 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 14 }}>{icon}</span>
                                 <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{session.title}</span>
                                 {session.isLive && <span style={{ fontSize: 10, fontWeight: 800, background: '#e00', color: '#fff', borderRadius: 4, padding: '2px 6px' }}>🔴 AO VIVO</span>}
                               </div>
                               {session.speaker && (
                                 <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 1 }}>{session.speaker}</div>
                               )}
+                              {/* Multi-avatar row for oficinas/talkshow */}
+                              {isMulti && <MultiAvatarRow urls={images!} size={32} />}
                             </div>
                           </div>
                           <div style={{
                             display: 'inline-block',
                             background: cfg.color, color: cfg.textColor,
                             fontSize: 10, fontWeight: 700,
-                            padding: '2px 8px', borderRadius: 6, marginTop: 5,
+                            padding: '2px 8px', borderRadius: 6, marginTop: 6,
                             textTransform: 'uppercase', letterSpacing: '0.6px',
                           }}>
                             {cfg.label}
@@ -201,88 +248,121 @@ export function AgendaScreen() {
       </div>
 
       {/* Session detail sheet */}
-      {selectedSession && (
-        <>
-          <div
-            className="fade-in"
-            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.28)', zIndex: 90, backdropFilter: 'blur(3px)' }}
-            onClick={() => setSelectedSession(null)}
-          />
-          <div
-            className="sheet-up"
-            style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0,
-              background: 'var(--surface)',
-              borderRadius: '24px 24px 0 0',
-              padding: '12px 20px 40px',
-              zIndex: 91,
-              boxShadow: '0 -4px 30px rgba(0,0,0,0.12)',
-              maxHeight: '80%',
-              overflowY: 'auto',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ width: 36, height: 4, background: 'var(--bg3)', borderRadius: 2, margin: '0 auto 18px' }} />
-
-            {/* Session header */}
-            <div style={{ display: 'flex', gap: 12, marginBottom: 14, alignItems: 'flex-start' }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 12,
-                background: 'var(--grad-warm)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 20, flexShrink: 0,
-              }}>
-                {TYPE_ICON[selectedSession.type] || '📌'}
-              </div>
-              <div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, color: 'var(--dark)' }}>
-                  {selectedSession.title}
-                </div>
-                {selectedSession.speaker && (
-                  <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>
-                    {selectedSession.speaker}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Meta */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-              <div style={{ background: 'var(--bg2)', borderRadius: 8, padding: '5px 10px', fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>
-                🕐 {selectedSession.startTime}–{selectedSession.endTime}
-              </div>
-              <div style={{
-                background: (TYPE_CONFIG[selectedSession.type] || TYPE_CONFIG.palestra).color,
-                color: (TYPE_CONFIG[selectedSession.type] || TYPE_CONFIG.palestra).textColor,
-                borderRadius: 8, padding: '5px 10px', fontSize: 12, fontWeight: 700,
-                textTransform: 'uppercase', letterSpacing: '0.5px',
-              }}>
-                {(TYPE_CONFIG[selectedSession.type] || TYPE_CONFIG.palestra).label}
-              </div>
-            </div>
-
-            {/* Description */}
-            {selectedSession.description && (
-              <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: 14, marginBottom: 18 }}>
-                <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.7, margin: 0 }}>{selectedSession.description}</p>
-              </div>
-            )}
-
-            <button
+      {selectedSession && (() => {
+        const images = parseImageUrl(selectedSession.imageUrl)
+        const isMulti = images && images.length > 1
+        return (
+          <>
+            <div
+              className="fade-in"
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.28)', zIndex: 90, backdropFilter: 'blur(3px)' }}
               onClick={() => setSelectedSession(null)}
+            />
+            <div
+              className="sheet-up"
               style={{
-                width: '100%', padding: 13,
-                background: 'var(--bg2)',
-                border: '1.5px solid var(--border)',
-                borderRadius: 12, fontSize: 13, fontWeight: 700,
-                cursor: 'pointer', color: 'var(--text2)',
+                position: 'absolute', bottom: 0, left: 0, right: 0,
+                background: 'var(--surface)',
+                borderRadius: '24px 24px 0 0',
+                padding: '12px 20px 40px',
+                zIndex: 91,
+                boxShadow: '0 -4px 30px rgba(0,0,0,0.12)',
+                maxHeight: '80%',
+                overflowY: 'auto',
               }}
+              onClick={e => e.stopPropagation()}
             >
-              Fechar
-            </button>
-          </div>
-        </>
-      )}
+              <div style={{ width: 36, height: 4, background: 'var(--bg3)', borderRadius: 2, margin: '0 auto 18px' }} />
+
+              {/* Session header */}
+              <div style={{ display: 'flex', gap: 12, marginBottom: 14, alignItems: 'flex-start' }}>
+                {/* Image area */}
+                {images && !isMulti ? (
+                  <img
+                    src={images[0]}
+                    alt={selectedSession.speaker}
+                    style={{
+                      width: 64, height: 64, borderRadius: 16,
+                      objectFit: 'cover', flexShrink: 0,
+                    }}
+                  />
+                ) : !images ? (
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 12,
+                    background: 'var(--grad-warm)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 20, flexShrink: 0,
+                  }}>
+                    {TYPE_ICON[selectedSession.type] || '📌'}
+                  </div>
+                ) : null}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, color: 'var(--dark)' }}>
+                    {selectedSession.title}
+                  </div>
+                  {selectedSession.speaker && (
+                    <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 2 }}>
+                      {selectedSession.speaker}
+                    </div>
+                  )}
+                  {/* Multi photos for oficinas */}
+                  {isMulti && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                      {images!.map((url, i) => (
+                        <img
+                          key={i}
+                          src={url}
+                          alt=""
+                          style={{
+                            width: 56, height: 56, borderRadius: 12,
+                            objectFit: 'cover',
+                            border: '2px solid var(--border)',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Meta */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                <div style={{ background: 'var(--bg2)', borderRadius: 8, padding: '5px 10px', fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>
+                  🕐 {selectedSession.startTime}–{selectedSession.endTime}
+                </div>
+                <div style={{
+                  background: (TYPE_CONFIG[selectedSession.type] || TYPE_CONFIG.palestra).color,
+                  color: (TYPE_CONFIG[selectedSession.type] || TYPE_CONFIG.palestra).textColor,
+                  borderRadius: 8, padding: '5px 10px', fontSize: 12, fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '0.5px',
+                }}>
+                  {(TYPE_CONFIG[selectedSession.type] || TYPE_CONFIG.palestra).label}
+                </div>
+              </div>
+
+              {/* Description */}
+              {selectedSession.description && (
+                <div style={{ background: 'var(--bg2)', borderRadius: 12, padding: 14, marginBottom: 18 }}>
+                  <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.7, margin: 0 }}>{selectedSession.description}</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => setSelectedSession(null)}
+                style={{
+                  width: '100%', padding: 13,
+                  background: 'var(--bg2)',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: 12, fontSize: 13, fontWeight: 700,
+                  cursor: 'pointer', color: 'var(--text2)',
+                }}
+              >
+                Fechar
+              </button>
+            </div>
+          </>
+        )
+      })()}
     </div>
   )
 }

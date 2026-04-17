@@ -124,6 +124,7 @@ export async function getSessions(): Promise<Session[]> {
     endTime: s.end_time,
     description: s.description ?? '',
     isLive: s.is_live ?? false,
+    imageUrl: s.image_url ?? undefined,
   }))
 }
 
@@ -148,6 +149,7 @@ export async function getLiveSession(): Promise<Session | null> {
       endTime: manualLive.end_time,
       description: manualLive.description ?? '',
       isLive: true,
+      imageUrl: manualLive.image_url ?? undefined,
     }
   }
 
@@ -188,6 +190,7 @@ export async function getLiveSession(): Promise<Session | null> {
     endTime: live.end_time,
     description: live.description ?? '',
     isLive: true,
+    imageUrl: live.image_url ?? undefined,
   }
 }
 
@@ -234,7 +237,27 @@ export async function getLiveSessionManual(): Promise<Session | null> {
     endTime: data.end_time,
     description: data.description ?? '',
     isLive: true,
+    imageUrl: data.image_url ?? undefined,
   }
+}
+
+// ─── APP CONFIG ───────────────────────────────────────────────────────────────
+
+export async function getActiveDay(): Promise<number> {
+  const { data } = await supabase
+    .from('app_config')
+    .select('value')
+    .eq('key', 'active_day')
+    .single()
+  return data ? Number(data.value) : 0
+}
+
+export async function setActiveDay(day: number): Promise<void> {
+  const { error } = await supabase
+    .from('app_config')
+    .update({ value: String(day) })
+    .eq('key', 'active_day')
+  if (error) throw error
 }
 
 // ─── MISSIONS ─────────────────────────────────────────────────────────────────
