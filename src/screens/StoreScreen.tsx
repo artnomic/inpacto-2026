@@ -70,7 +70,7 @@ export function StoreScreen() {
               borderRadius: 12,
               fontSize: 13,
               fontWeight: 700,
-              color: tab === t.key ? '#fff' : 'var(--text2)',
+              color: tab === t.key ? '#fff' : '#ccc',
               cursor: 'pointer',
               transition: 'all 0.18s',
             }}
@@ -175,12 +175,12 @@ export function StoreScreen() {
                     onClick={e => { e.stopPropagation(); toggleWishlist(product.id) }}
                     style={{
                       background: product.inWishlist ? 'rgba(229,62,62,0.1)' : 'transparent',
-                      border: product.inWishlist ? '1px solid #e53e3e' : '1px solid var(--text2)',
+                      border: product.inWishlist ? '1px solid #e53e3e' : '1px solid #ccc',
                       borderRadius: 8,
                       padding: '4px 8px',
                       fontSize: 13,
                       cursor: 'pointer',
-                      color: product.inWishlist ? '#e53e3e' : 'var(--text2)',
+                      color: product.inWishlist ? '#e53e3e' : '#ccc',
                       transition: 'all 0.15s',
                       lineHeight: 1,
                     }}
@@ -241,7 +241,7 @@ export function StoreScreen() {
             <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--pink)', marginBottom: 12 }}>
               R$ {selected.price.toFixed(2).replace('.', ',')}
             </div>
-            <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 20 }}>
+            <p style={{ fontSize: 14, color: '#ccc', lineHeight: 1.6, marginBottom: 20 }}>
               {selected.description}
             </p>
             <button
