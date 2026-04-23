@@ -175,12 +175,12 @@ export function StoreScreen() {
                     onClick={e => { e.stopPropagation(); toggleWishlist(product.id) }}
                     style={{
                       background: product.inWishlist ? 'rgba(229,62,62,0.1)' : 'transparent',
-                      border: '1px solid #e53e3e',
+                      border: product.inWishlist ? '1px solid #e53e3e' : '1px solid var(--text2)',
                       borderRadius: 8,
                       padding: '4px 8px',
                       fontSize: 13,
                       cursor: 'pointer',
-                      color: '#e53e3e',
+                      color: product.inWishlist ? '#e53e3e' : 'var(--text2)',
                       transition: 'all 0.15s',
                       lineHeight: 1,
                     }}
