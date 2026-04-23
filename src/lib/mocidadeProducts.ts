@@ -1,11 +1,17 @@
-// Maps Mocidade product names to their static image paths in /public/loja/
-export const MOCIDADE_IMAGE_MAP: Record<string, string> = {
-  'Garrafa 1': '/loja/garrafa-1.jpg',
-  'Garrafa 2': '/loja/garrafa-2.jpg',
-  'Copo':      '/loja/copo.jpg',
-  'Caderno':   '/loja/caderno.jpg',
-  'Moletom':   '/loja/moletom.jpg',
-  'Camisa 1':  '/loja/camisa-1.jpg',
-  'Camisa 2':  '/loja/camisa-2.jpg',
-  'Camisa 3':  '/loja/camisa-3.jpg',
-}
+import type { Product } from '../store/appStore'
+
+export const MOCIDADE_PRODUCTS: Omit<Product, 'inWishlist' | 'purchased'>[] = [
+  { id: 'moc-garrafa-1', category: 'shop', name: 'Garrafa 1', price: 90.80,  emoji: '🫙', image: '/loja/garrafa-1.jpg', description: 'Garrafa exclusiva Mocidade.' },
+  { id: 'moc-garrafa-2', category: 'shop', name: 'Garrafa 2', price: 78.80,  emoji: '🫙', image: '/loja/garrafa-2.jpg', description: 'Garrafa exclusiva Mocidade.' },
+  { id: 'moc-copo',      category: 'shop', name: 'Copo',      price: 70.80,  emoji: '🥤', image: '/loja/copo.jpg',      description: 'Copo exclusivo Mocidade.'    },
+  { id: 'moc-caderno',   category: 'shop', name: 'Caderno',   price: 38.80,  emoji: '📓', image: '/loja/caderno.jpg',   description: 'Caderno exclusivo Mocidade.' },
+  { id: 'moc-moletom',   category: 'shop', name: 'Moletom',   price: 159.80, emoji: '🧥', image: '/loja/moletom.jpg',   description: 'Moletom exclusivo Mocidade.' },
+  { id: 'moc-camisa-1',  category: 'shop', name: 'Camisa 1',  price: 89.80,  emoji: '👕', image: '/loja/camisa-1.jpg',  description: 'Camisa exclusiva Mocidade.'  },
+  { id: 'moc-camisa-2',  category: 'shop', name: 'Camisa 2',  price: 89.80,  emoji: '👕', image: '/loja/camisa-2.jpg',  description: 'Camisa exclusiva Mocidade.'  },
+  { id: 'moc-camisa-3',  category: 'shop', name: 'Camisa 3',  price: 89.80,  emoji: '👕', image: '/loja/camisa-3.jpg',  description: 'Camisa exclusiva Mocidade.'  },
+]
+
+// Maps product names to image paths — used by api.ts for Supabase products
+export const MOCIDADE_IMAGE_MAP: Record<string, string> = Object.fromEntries(
+  MOCIDADE_PRODUCTS.map(p => [p.name, p.image as string])
+)
