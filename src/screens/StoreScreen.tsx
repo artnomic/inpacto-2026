@@ -109,7 +109,6 @@ export function StoreScreen() {
               <div style={{
                 width: '100%',
                 height: 170,
-                background: 'linear-gradient(135deg, rgba(255,143,68,.1), rgba(250,20,98,.06))',
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
@@ -118,7 +117,7 @@ export function StoreScreen() {
                 position: 'relative',
               }}>
                 {product.image
-                  ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <span style={{ fontSize: 44 }}>{product.emoji}</span>
                 }
                 {product.inWishlist && (
@@ -187,7 +186,7 @@ export function StoreScreen() {
                 <img
                   src={selected.image}
                   alt={selected.name}
-                  style={{ width: '100%', height: 240, borderRadius: 16, objectFit: 'contain', marginBottom: 18, border: '1px solid var(--border)', display: 'block', background: 'var(--bg2)' }}
+                  style={{ width: '100%', height: 240, borderRadius: 16, objectFit: 'cover', marginBottom: 18, display: 'block' }}
                 />
               ) : (
                 <div style={{ width: '100%', height: 160, background: 'linear-gradient(135deg, rgba(255,143,68,.12), rgba(250,20,98,.08))', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, marginBottom: 18, border: '1px solid var(--border)' }}>
