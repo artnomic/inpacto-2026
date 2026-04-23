@@ -230,18 +230,7 @@ export function StoreScreen() {
                   justifyContent: 'center',
                 }}>
                   <span style={{ fontSize: 48, filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))' }}>{rest.logoEmoji}</span>
-                  {/* Open/closed badge */}
-                  <div style={{
-                    position: 'absolute', top: 10, right: 10,
-                    background: rest.isOpen ? 'rgba(34,197,94,0.9)' : 'rgba(100,100,100,0.85)',
-                    color: '#fff',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: '3px 8px',
-                    borderRadius: 20,
-                  }}>
-                    {rest.isOpen ? 'Aberto' : 'Fechado'}
-                  </div>
+
                 </div>
                 {/* Info */}
                 <div style={{ padding: '12px 14px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -349,15 +338,6 @@ export function StoreScreen() {
               ← Voltar
             </button>
 
-            {/* Open badge */}
-            <div style={{
-              position: 'absolute', top: 52, right: 16,
-              background: selectedRestaurant.isOpen ? 'rgba(34,197,94,0.9)' : 'rgba(100,100,100,0.85)',
-              color: '#fff', fontSize: 11, fontWeight: 700,
-              padding: '4px 10px', borderRadius: 20,
-            }}>
-              {selectedRestaurant.isOpen ? 'Aberto' : 'Fechado'}
-            </div>
 
             {/* Name overlay */}
             <div style={{
