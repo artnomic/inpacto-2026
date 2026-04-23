@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useAppStore } from './store/appStore'
 import { Navbar } from './components/Navbar'
 import { Topbar } from './components/Topbar'
+import { InstallPrompt } from './components/InstallPrompt'
 
 import { SplashScreen } from './screens/SplashScreen'
 import { LoginScreen } from './screens/LoginScreen'
@@ -140,6 +141,7 @@ export default function App() {
       <XpToast />
       <GlobalToast />
       <CelebrationModal />
+      <InstallPrompt />
       <Navbar />
     </div>
   )
