@@ -28,7 +28,7 @@ export function WishlistScreen() {
         </button>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 700, color: '#fff' }}>Minha Wishlist 💛</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 700, color: '#fff' }}>Minha Wishlist ❤️</div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4, fontWeight: 500 }}>
               {wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'itens'}
               {purchasedCount > 0 ? ` • ${purchasedCount} comprado${purchasedCount !== 1 ? 's' : ''}` : ''}
@@ -47,7 +47,7 @@ export function WishlistScreen() {
 
       {wishlistItems.length === 0 ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>💛</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>❤️</div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Wishlist vazia</div>
           <div style={{ fontSize: 14, color: 'var(--text3)', marginBottom: 24, lineHeight: 1.6 }}>
             Salve produtos e alimentos que você quer conferir durante o evento!
