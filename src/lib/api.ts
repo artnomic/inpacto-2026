@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import type {
   Achievement, EventConfig, FeedPost, Mission, Note, Product, RankingUser, Session, User,
 } from '../store/appStore'
+import { MOCIDADE_IMAGE_MAP } from './mocidadeProducts'
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 
@@ -737,6 +738,7 @@ export async function getProducts(userId: string): Promise<Product[]> {
     name: p.name,
     price: p.price,
     emoji: p.emoji,
+    image: p.category === 'shop' ? MOCIDADE_IMAGE_MAP[p.name] : undefined,
     description: p.description ?? '',
     venue: p.venue ?? undefined,
     inWishlist: wishlistIds.has(p.id),
